@@ -1,4 +1,4 @@
-package fiz
+package ent
 
 import "github.com/gopxl/pixel"
 
@@ -7,6 +7,10 @@ type Collision struct {
 	Other  PhysicsBody
 	Normal pixel.Vec
 	Point  pixel.Vec
+}
+
+type CollisionListener interface {
+	OnCollision(Collision)
 }
 
 func (c Collision) ForOther() Collision {
@@ -58,13 +62,17 @@ func checkActiveBodies(a, b ActivePhysicsBody) (Collision, bool) {
 	correction := col.normal.Scaled(col.overlap / 2)
 
 	a.SetState(BodyState{
-		Position: aState.Position.Sub(correction),
-		Velocity: newAVel,
+		Position:        aState.Position.Sub(correction),
+		Velocity:        newAVel,
+		Angle:           aState.Angle,
+		AngularVelocity: aState.AngularVelocity,
 	})
 
 	b.SetState(BodyState{
-		Position: bState.Position.Add(correction),
-		Velocity: newBVel,
+		Position:        bState.Position.Add(correction),
+		Velocity:        newBVel,
+		Angle:           bState.Angle,
+		AngularVelocity: bState.AngularVelocity,
 	})
 
 	return Collision{
@@ -92,8 +100,10 @@ func checkActiveAndKinematicBodies(a ActivePhysicsBody, b PhysicsBody) (Collisio
 	correction := col.normal.Scaled(col.overlap)
 
 	a.SetState(BodyState{
-		Position: aState.Position.Sub(correction),
-		Velocity: newAVel,
+		Position:        aState.Position.Sub(correction),
+		Velocity:        newAVel,
+		Angle:           aState.Angle,
+		AngularVelocity: aState.AngularVelocity,
 	})
 
 	return Collision{

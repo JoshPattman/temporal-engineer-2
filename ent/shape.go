@@ -1,4 +1,4 @@
-package fiz
+package ent
 
 import (
 	"math"

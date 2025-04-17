@@ -21,6 +21,7 @@ func NewStation() *Station {
 }
 
 type Station struct {
+	ent.EntityBase
 	pos         pixel.Vec
 	sprites     []*pixel.Sprite
 	spriteTimer float64
@@ -46,9 +47,4 @@ func (s *Station) Tags() []string {
 func (s *Station) Update(win *pixelgl.Window, all *ent.Entities, dt float64) (toCreate []ent.Entity, toDestroy []ent.Entity) {
 	s.spriteTimer += dt
 	return nil, nil
-}
-
-// UpdateLayer implements ent.Entity.
-func (s *Station) UpdateLayer() int {
-	return 0
 }

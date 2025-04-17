@@ -14,6 +14,7 @@ func NewCamera() *Camera {
 }
 
 type Camera struct {
+	ent.EntityBase
 	pos pixel.Vec
 }
 
@@ -25,14 +26,6 @@ type CameraTarget interface {
 	Position() pixel.Vec
 }
 
-// Draw implements ent.Entity.
-func (c *Camera) Draw(win *pixelgl.Window, worldToScreen pixel.Matrix) {}
-
-// DrawLayer implements ent.Entity.
-func (c *Camera) DrawLayer() int {
-	return 0
-}
-
 // Tags implements ent.Entity.
 func (c *Camera) Tags() []string {
 	return []string{"camera"}
@@ -40,14 +33,13 @@ func (c *Camera) Tags() []string {
 
 // Update implements ent.Entity.
 func (c *Camera) Update(win *pixelgl.Window, all *ent.Entities, dt float64) (toCreate []ent.Entity, toDestroy []ent.Entity) {
-	targets := all.ForTag("player_camera_target")
-	var target CameraTarget = c
-	for _, t := range targets {
-		t, ok := t.(CameraTarget)
-		if ok {
-			target = t
-			break
-		}
+	target, ok := ent.First(
+		ent.FilterEntitiesByType[CameraTarget](
+			all.ForTag("player_camera_target"),
+		),
+	)
+	if !ok {
+		target = c
 	}
 	c.pos = pixel.Lerp(c.pos, target.Position(), 0.05)
 	return nil, nil

@@ -2,7 +2,6 @@ package main
 
 import (
 	"ent"
-	"fiz"
 	"math"
 
 	"github.com/gopxl/pixel"
@@ -13,70 +12,75 @@ func NewPlayer() *Player {
 	shipSprite := GlobalSpriteManager.FullSprite("ship.png")
 	bubbleSprite := GlobalSpriteManager.FullSprite("bubble.png")
 	return &Player{
-		sprite:              shipSprite,
-		radius:              1,
-		boosterForce:        50,
-		dragCoeff:           0.3,
-		angularAcceleration: 12,
-		maxAngularSpeed:     6,
-		bubbleSprite:        bubbleSprite,
-		sheilds:             3,
+		sprite:           shipSprite,
+		radius:           1,
+		boosterForce:     50,
+		linearDragCoeff:  0.3,
+		angularDragCoeff: 0.6,
+		boosterTorue:     12,
+		bubbleSprite:     bubbleSprite,
+		sheilds:          3,
 	}
 }
 
-var _ fiz.ActivePhysicsBody = &Player{}
+var _ ent.ActivePhysicsBody = &Player{}
 
 type Player struct {
+	ent.EntityBase
 	Transform
-	velocity            pixel.Vec
-	angularSpeed        float64
-	sprite              *pixel.Sprite
-	bubbleSprite        *pixel.Sprite
-	radius              float64
-	boosterForce        float64
-	dragCoeff           float64
-	maxAngularSpeed     float64
-	angularAcceleration float64
-	lastDamageTimer     float64
-	bubbleTimer         float64
-	sheilds             int
-	dead                bool
+	velocity         pixel.Vec
+	angularSpeed     float64
+	sprite           *pixel.Sprite
+	bubbleSprite     *pixel.Sprite
+	radius           float64
+	boosterForce     float64
+	linearDragCoeff  float64
+	angularDragCoeff float64
+	boosterTorue     float64
+	lastDamageTimer  float64
+	bubbleTimer      float64
+	sheilds          int
+	dead             bool
 }
 
-// Elasticity implements fiz.ActivePhysicsBody.
+// Elasticity implements ent.ActivePhysicsBody.
 func (p *Player) Elasticity() float64 {
 	return 0.3
 }
 
-// IsPhysicsActive implements fiz.ActivePhysicsBody.
+// IsPhysicsActive implements ent.ActivePhysicsBody.
 func (p *Player) IsPhysicsActive() bool {
 	return true
 }
 
-// Mass implements fiz.ActivePhysicsBody.
+// Mass implements ent.ActivePhysicsBody.
 func (p *Player) Mass() float64 {
 	return 1
 }
 
-// SetState implements fiz.ActivePhysicsBody.
-func (p *Player) SetState(state fiz.BodyState) {
+// SetState implements ent.ActivePhysicsBody.
+func (p *Player) SetState(state ent.BodyState) {
 	p.pos = state.Position
 	p.velocity = state.Velocity
+	p.angularSpeed = state.AngularVelocity
+	p.rot = state.Angle
 }
 
-// Shape implements fiz.ActivePhysicsBody.
-func (p *Player) Shape() fiz.Shape {
-	return fiz.Circle{
+// Shape implements ent.ActivePhysicsBody.
+func (p *Player) Shape() ent.Shape {
+	return ent.Circle{
 		Center: p.pos,
 		Radius: p.radius,
 	}
 }
 
-// State implements fiz.ActivePhysicsBody.
-func (p *Player) State() fiz.BodyState {
-	return fiz.BodyState{
-		Position: p.pos,
-		Velocity: p.velocity,
+// State implements ent.ActivePhysicsBody.
+func (p *Player) State() ent.BodyState {
+	return ent.BodyState{
+		Position:        p.pos,
+		Velocity:        p.velocity,
+		Angle:           p.rot,
+		AngularVelocity: p.angularSpeed,
 	}
 }
 
@@ -93,38 +97,22 @@ func (p *Player) Update(win *pixelgl.Window, entities *ent.Entities, dt float64)
 				p,
 			}
 	}
-	var force pixel.Vec
+	fx := ent.BodyEffects{}
+
 	if win.Pressed(pixelgl.KeyW) {
-		force = force.Add(
-			p.Forward().Scaled(p.boosterForce),
-		)
+		fx.Force = fx.Force.Add(p.Forward().Scaled(p.boosterForce))
 	}
-	dragCoeff := p.dragCoeff
-	if win.Pressed(pixelgl.KeyS) {
-		dragCoeff *= 10
-	}
-
 	if win.Pressed(pixelgl.KeyA) {
-		p.angularSpeed += p.angularAcceleration * dt
-	} else if win.Pressed(pixelgl.KeyD) {
-		p.angularSpeed -= p.angularAcceleration * dt
-	} else if p.angularSpeed < 0 {
-		p.angularSpeed += p.angularAcceleration * dt
-	} else {
-		p.angularSpeed -= p.angularAcceleration * dt
+		fx.Torque += p.boosterTorue
+	}
+	if win.Pressed(pixelgl.KeyD) {
+		fx.Torque -= p.boosterTorue
 	}
 
-	p.rot += p.angularSpeed * dt
+	fx.Force = fx.Force.Add(ent.CalculateDragForce(p.velocity, p.linearDragCoeff, 0.5))
+	fx.Torque += ent.CalculateDragTorque(p.angularSpeed, p.angularDragCoeff, 0.8)
 
-	force = force.Add(
-		p.velocity.Scaled(p.velocity.Len() * -dragCoeff),
-	)
-	p.velocity = p.velocity.Add(
-		force.Scaled(dt),
-	)
-	p.pos = p.pos.Add(
-		p.velocity.Scaled(dt),
-	)
+	ent.EulerStateUpdate(p, fx, dt)
 
 	p.lastDamageTimer += dt
 	p.bubbleTimer -= dt
@@ -153,14 +141,6 @@ func (p *Player) Draw(win *pixelgl.Window, worldToScreen pixel.Matrix) {
 	}
 }
 
-func (p *Player) UpdateLayer() int {
-	return 0
-}
-
-func (p *Player) DrawLayer() int {
-	return 0
-}
-
 func (p *Player) Tags() []string {
 	return []string{
 		"player",
@@ -168,7 +148,7 @@ func (p *Player) Tags() []string {
 	}
 }
 
-func (p *Player) OnCollision(col fiz.Collision) {
+func (p *Player) OnCollision(col ent.Collision) {
 	if p.sheilds <= 0 {
 		p.dead = true
 		return
@@ -208,6 +188,7 @@ func NewExplosion(at pixel.Vec) *Explosion {
 var _ ent.Entity = &Explosion{}
 
 type Explosion struct {
+	ent.EntityBase
 	pos     pixel.Vec
 	timer   float64
 	sprites []*pixel.Sprite
@@ -223,11 +204,6 @@ func (e *Explosion) Draw(win *pixelgl.Window, worldToScreen pixel.Matrix) {
 	)
 }
 
-// DrawLayer implements ent.Entity.
-func (e *Explosion) DrawLayer() int {
-	return 0
-}
-
 // Tags implements ent.Entity.
 func (e *Explosion) Tags() []string {
 	return []string{"player_camera_target"}
@@ -240,11 +216,6 @@ func (e *Explosion) Update(win *pixelgl.Window, all *ent.Entities, dt float64) (
 		return nil, []ent.Entity{e}
 	}
 	return nil, nil
-}
-
-// UpdateLayer implements ent.Entity.
-func (e *Explosion) UpdateLayer() int {
-	return 0
 }
 
 func (e *Explosion) Position() pixel.Vec {

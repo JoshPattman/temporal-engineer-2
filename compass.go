@@ -18,6 +18,7 @@ func NewCompass() *Compass {
 }
 
 type Compass struct {
+	ent.EntityBase
 	sprite *pixel.Sprite
 	angle  float64
 }
@@ -39,22 +40,14 @@ func (c *Compass) DrawLayer() int {
 	return -10
 }
 
-// Tags implements ent.Entity.
-func (c *Compass) Tags() []string {
-	return nil
-}
-
 // Update implements ent.Entity.
 func (c *Compass) Update(win *pixelgl.Window, all *ent.Entities, dt float64) (toCreate []ent.Entity, toDestroy []ent.Entity) {
-	players := all.ForTag("player")
-	var player *Player
-	for _, p := range players {
-		if p, ok := p.(*Player); ok {
-			player = p
-			break
-		}
-	}
-	if player == nil {
+	player, ok := ent.First(
+		ent.FilterEntitiesByType[*Player](
+			all.ForTag("player"),
+		),
+	)
+	if !ok {
 		return nil, nil
 	}
 	c.angle = player.pos.Angle()

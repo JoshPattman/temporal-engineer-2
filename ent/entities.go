@@ -3,11 +3,15 @@ package ent
 import (
 	"iter"
 	"slices"
+
+	"github.com/gopxl/pixel"
+	"github.com/gopxl/pixel/pixelgl"
 )
 
 type Entities struct {
 	orderedByDraw   []Entity
 	orderedByUpdate []Entity
+	physicsBodies   []PhysicsBody
 	byTags          map[string][]Entity
 }
 
@@ -52,6 +56,9 @@ func (es *Entities) Add(e Entity) {
 			es.byTags[tag] = append(es.byTags[tag], e)
 		}
 	}
+	if e, ok := e.(PhysicsBody); ok {
+		es.physicsBodies = append(es.physicsBodies, e)
+	}
 }
 
 func (es *Entities) Remove(e Entity) {
@@ -78,6 +85,13 @@ func (es *Entities) Remove(e Entity) {
 			es.byTags[tag] = slices.Delete(es.byTags[tag], idx, idx+1)
 		}
 	}
+	if e, ok := e.(PhysicsBody); ok {
+		idx := slices.Index(es.physicsBodies, e)
+		if idx == -1 {
+			panic("was not in entities")
+		}
+		es.physicsBodies = slices.Delete(es.physicsBodies, idx, idx+1)
+	}
 }
 
 func (es *Entities) Has(e Entity) bool {
@@ -89,26 +103,69 @@ func (es *Entities) Has(e Entity) bool {
 	return false
 }
 
-func (es *Entities) ByDraw() iter.Seq2[int, Entity] {
-	return slices.All(es.orderedByDraw)
+func (es *Entities) ByDraw() iter.Seq[Entity] {
+	return All(es.orderedByDraw)
 }
 
-func (es *Entities) ByUpdate() iter.Seq2[int, Entity] {
-	return slices.All(es.orderedByUpdate)
+func (es *Entities) ByUpdate() iter.Seq[Entity] {
+	return All(es.orderedByUpdate)
 }
 
-func (es *Entities) ForTag(tag string) iter.Seq2[int, Entity] {
+func (es *Entities) WithPhysics() iter.Seq[PhysicsBody] {
+	return All(es.physicsBodies)
+}
+
+func (es *Entities) ForTag(tag string) iter.Seq[Entity] {
 	if forTag, ok := es.byTags[tag]; ok {
-		return slices.All(forTag)
+		return All(forTag)
 	} else {
-		return func(yield func(int, Entity) bool) {}
+		return func(yield func(Entity) bool) {}
 	}
 }
 
-func (es *Entities) ForTagSlice(tag string) []Entity {
-	if forTag, ok := es.byTags[tag]; ok {
-		return slices.Clone(forTag)
-	} else {
-		return nil
+func (es *Entities) Update(win *pixelgl.Window, dt float64) {
+	allToCreate := []Entity{}
+	allToRemove := []Entity{}
+	for e := range es.ByUpdate() {
+		toCreate, toRemove := e.Update(win, es, dt)
+		allToCreate = append(allToCreate, toCreate...)
+		allToRemove = append(allToRemove, toRemove...)
+	}
+	for _, e := range allToCreate {
+		if !es.Has(e) {
+			es.Add(e)
+		}
+	}
+	for _, e := range allToRemove {
+		if es.Has(e) {
+			es.Remove(e)
+		}
+	}
+
+	fizBodies := slices.Collect(es.WithPhysics())
+	cols := StatelessCollisionPhysics(fizBodies)
+
+	for _, col := range cols {
+		self, ok := col.Self.(CollisionListener)
+		if ok {
+			self.OnCollision(col)
+		}
+		col = col.ForOther()
+		self, ok = col.Self.(CollisionListener)
+		if ok {
+			self.OnCollision(col)
+		}
+	}
+}
+
+func (es *Entities) PreDraw(win *pixelgl.Window) {
+	for e := range es.ByDraw() {
+		e.PreDraw(win)
+	}
+}
+
+func (es *Entities) Draw(win *pixelgl.Window, worldToScreen pixel.Matrix) {
+	for e := range es.ByDraw() {
+		e.Draw(win, worldToScreen)
 	}
 }

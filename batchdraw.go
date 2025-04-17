@@ -19,7 +19,13 @@ func NewBatchDraw(spritePath string) *BatchDraw {
 }
 
 type BatchDraw struct {
+	ent.EntityBase
 	Batch *pixel.Batch
+}
+
+// PreDraw implements ent.Entity.
+func (b *BatchDraw) PreDraw(win *pixelgl.Window) {
+	b.Batch.Clear()
 }
 
 // Draw implements ent.Entity.
@@ -30,20 +36,4 @@ func (b *BatchDraw) Draw(win *pixelgl.Window, worldToScreen pixel.Matrix) {
 // DrawLayer implements ent.Entity.
 func (b *BatchDraw) DrawLayer() int {
 	return -3
-}
-
-// Tags implements ent.Entity.
-func (b *BatchDraw) Tags() []string {
-	return nil
-}
-
-// Update implements ent.Entity.
-func (b *BatchDraw) Update(win *pixelgl.Window, all *ent.Entities, dt float64) (toCreate []ent.Entity, toDestroy []ent.Entity) {
-	b.Batch.Clear()
-	return nil, nil
-}
-
-// UpdateLayer implements ent.Entity.
-func (b *BatchDraw) UpdateLayer() int {
-	return -1
 }

@@ -25,6 +25,7 @@ func NewBackground() *Background {
 }
 
 type Background struct {
+	ent.EntityBase
 	l1 *pixel.Sprite
 	l2 *pixel.Sprite
 	l3 *pixel.Sprite
@@ -68,19 +69,4 @@ func (b *Background) Draw(win *pixelgl.Window, worldToScreen pixel.Matrix) {
 // DrawLayer implements ent.Entity.
 func (b *Background) DrawLayer() int {
 	return 100
-}
-
-// Tags implements ent.Entity.
-func (b *Background) Tags() []string {
-	return nil
-}
-
-// Update implements ent.Entity.
-func (b *Background) Update(win *pixelgl.Window, all *ent.Entities, dt float64) (toCreate []ent.Entity, toDestroy []ent.Entity) {
-	return nil, nil
-}
-
-// UpdateLayer implements ent.Entity.
-func (b *Background) UpdateLayer() int {
-	return 0
 }
