@@ -9,46 +9,29 @@ import (
 )
 
 type World struct {
-	orderedByDraw   []Entity
-	orderedByUpdate []Entity
-	physicsBodies   []PhysicsBody
+	allEntities     *index[Entity]
+	orderedByDraw   *index[Drawer]
+	orderedByUpdate *index[Updater]
+	physicsBodies   *index[PhysicsBody]
 	byTags          map[string][]Entity
 }
 
 func NewWorld() *World {
 	return &World{
-		byTags: make(map[string][]Entity, 0),
+		allEntities:     newUnorderedIndex[Entity](),
+		orderedByDraw:   newOrderedIndex(func(d Drawer) int { return d.DrawLayer() }),
+		orderedByUpdate: newOrderedIndex(func(u Updater) int { return u.UpdateLayer() }),
+		physicsBodies:   newUnorderedIndex[PhysicsBody](),
+		byTags:          make(map[string][]Entity, 0),
 	}
 }
 
 func (es *World) Add(toAdd ...Entity) {
 	for _, e := range toAdd {
-		{
-			inserted := false
-			for i := range es.orderedByDraw {
-				if e.DrawLayer() > es.orderedByDraw[i].DrawLayer() {
-					es.orderedByDraw = slices.Insert(es.orderedByDraw, i, e)
-					inserted = true
-					break
-				}
-			}
-			if !inserted {
-				es.orderedByDraw = append(es.orderedByDraw, e)
-			}
-		}
-		{
-			inserted := false
-			for i := range es.orderedByUpdate {
-				if e.UpdateLayer() > es.orderedByUpdate[i].UpdateLayer() {
-					es.orderedByUpdate = slices.Insert(es.orderedByUpdate, i, e)
-					inserted = true
-					break
-				}
-			}
-			if !inserted {
-				es.orderedByUpdate = append(es.orderedByUpdate, e)
-			}
-		}
+		es.allEntities.tryAdd(e)
+		es.orderedByDraw.tryAdd(e)
+		es.orderedByUpdate.tryAdd(e)
+		es.physicsBodies.tryAdd(e)
 		{
 			for _, tag := range e.Tags() {
 				if _, ok := es.byTags[tag]; !ok {
@@ -57,27 +40,14 @@ func (es *World) Add(toAdd ...Entity) {
 				es.byTags[tag] = append(es.byTags[tag], e)
 			}
 		}
-		if e, ok := e.(PhysicsBody); ok {
-			es.physicsBodies = append(es.physicsBodies, e)
-		}
 	}
 }
 
 func (es *World) Remove(e Entity) {
-	{
-		idx := slices.Index(es.orderedByDraw, e)
-		if idx == -1 {
-			panic("was not in entities")
-		}
-		es.orderedByDraw = slices.Delete(es.orderedByDraw, idx, idx+1)
-	}
-	{
-		idx := slices.Index(es.orderedByUpdate, e)
-		if idx == -1 {
-			panic("was not in entities")
-		}
-		es.orderedByUpdate = slices.Delete(es.orderedByUpdate, idx, idx+1)
-	}
+	es.allEntities.tryRemove(e)
+	es.orderedByDraw.tryRemove(e)
+	es.orderedByUpdate.tryRemove(e)
+	es.physicsBodies.tryRemove(e)
 	{
 		for _, tag := range e.Tags() {
 			idx := slices.Index(es.byTags[tag], e)
@@ -87,17 +57,10 @@ func (es *World) Remove(e Entity) {
 			es.byTags[tag] = slices.Delete(es.byTags[tag], idx, idx+1)
 		}
 	}
-	if e, ok := e.(PhysicsBody); ok {
-		idx := slices.Index(es.physicsBodies, e)
-		if idx == -1 {
-			panic("was not in entities")
-		}
-		es.physicsBodies = slices.Delete(es.physicsBodies, idx, idx+1)
-	}
 }
 
 func (es *World) Has(e Entity) bool {
-	for _, e2 := range es.orderedByUpdate {
+	for e2 := range es.allEntities.All() {
 		if e == e2 {
 			return true
 		}
@@ -105,16 +68,16 @@ func (es *World) Has(e Entity) bool {
 	return false
 }
 
-func (es *World) ByDraw() iter.Seq[Entity] {
-	return All(es.orderedByDraw)
+func (es *World) ByDraw() iter.Seq[Drawer] {
+	return es.orderedByDraw.All()
 }
 
-func (es *World) ByUpdate() iter.Seq[Entity] {
-	return All(es.orderedByUpdate)
+func (es *World) ByUpdate() iter.Seq[Updater] {
+	return es.orderedByUpdate.All()
 }
 
 func (es *World) WithPhysics() iter.Seq[PhysicsBody] {
-	return All(es.physicsBodies)
+	return es.physicsBodies.All()
 }
 
 func (es *World) ForTag(tag string) iter.Seq[Entity] {
@@ -167,4 +130,59 @@ func (es *World) Draw(win *pixelgl.Window, worldToScreen pixel.Matrix) {
 	for e := range es.ByDraw() {
 		e.Draw(win, worldToScreen)
 	}
+}
+
+func newOrderedIndex[T comparable](order func(T) int) *index[T] {
+	return &index[T]{
+		items: make([]T, 0),
+		layer: order,
+	}
+}
+
+func newUnorderedIndex[T comparable]() *index[T] {
+	return &index[T]{
+		items: make([]T, 0),
+		layer: func(t T) int { return 0 },
+	}
+}
+
+type index[T comparable] struct {
+	items []T
+	layer func(T) int
+}
+
+func (index *index[T]) tryAdd(item any) bool {
+	itemTyped, ok := item.(T)
+	if !ok {
+		return false
+	}
+
+	if slices.Contains(index.items, itemTyped) {
+		return false
+	}
+
+	i := 0
+	for i < len(index.items) && index.layer(itemTyped) <= index.layer(index.items[i]) {
+		i += 1
+	}
+
+	index.items = slices.Insert(index.items, i, itemTyped)
+	return true
+}
+
+func (index *index[T]) tryRemove(item any) bool {
+	itemTyped, ok := item.(T)
+	if !ok {
+		return false
+	}
+	i := slices.Index(index.items, itemTyped)
+	if i == -1 {
+		return false
+	}
+	index.items = slices.Delete(index.items, i, i+1)
+	return true
+}
+
+func (index *index[T]) All() iter.Seq[T] {
+	return All(index.items)
 }
