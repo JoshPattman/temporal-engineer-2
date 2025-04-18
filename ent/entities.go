@@ -68,18 +68,6 @@ func (es *World) Has(e Entity) bool {
 	return false
 }
 
-func (es *World) ByDraw() iter.Seq[Drawer] {
-	return es.orderedByDraw.All()
-}
-
-func (es *World) ByUpdate() iter.Seq[Updater] {
-	return es.orderedByUpdate.All()
-}
-
-func (es *World) WithPhysics() iter.Seq[PhysicsBody] {
-	return es.physicsBodies.All()
-}
-
 func (es *World) ForTag(tag string) iter.Seq[Entity] {
 	if forTag, ok := es.byTags[tag]; ok {
 		return All(forTag)
@@ -91,7 +79,7 @@ func (es *World) ForTag(tag string) iter.Seq[Entity] {
 func (es *World) Update(win *pixelgl.Window, dt float64) {
 	allToCreate := []Entity{}
 	allToRemove := []Entity{}
-	for e := range es.ByUpdate() {
+	for e := range es.orderedByUpdate.All() {
 		toCreate, toRemove := e.Update(win, es, dt)
 		allToCreate = append(allToCreate, toCreate...)
 		allToRemove = append(allToRemove, toRemove...)
@@ -107,7 +95,7 @@ func (es *World) Update(win *pixelgl.Window, dt float64) {
 		}
 	}
 
-	fizBodies := slices.Collect(es.WithPhysics())
+	fizBodies := slices.Collect(es.physicsBodies.All())
 	cols := StatelessCollisionPhysics(fizBodies)
 
 	for _, col := range cols {
@@ -124,10 +112,10 @@ func (es *World) Update(win *pixelgl.Window, dt float64) {
 }
 
 func (es *World) Draw(win *pixelgl.Window, worldToScreen pixel.Matrix) {
-	for e := range es.ByDraw() {
+	for e := range es.orderedByDraw.All() {
 		e.PreDraw(win)
 	}
-	for e := range es.ByDraw() {
+	for e := range es.orderedByDraw.All() {
 		e.Draw(win, worldToScreen)
 	}
 }
