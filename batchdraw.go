@@ -9,18 +9,20 @@ import (
 
 var _ ent.Entity = &BatchDraw{}
 
-func NewBatchDraw(spritePath string) *BatchDraw {
+func NewBatchDraw(spritePath string, tag string) *BatchDraw {
 	return &BatchDraw{
 		Batch: pixel.NewBatch(
 			&pixel.TrianglesData{},
 			GlobalSpriteManager.Picture(spritePath),
 		),
+		tag: tag,
 	}
 }
 
 type BatchDraw struct {
 	ent.EntityBase
 	Batch *pixel.Batch
+	tag   string
 }
 
 // PreDraw implements ent.Entity.
@@ -36,4 +38,8 @@ func (b *BatchDraw) Draw(win *pixelgl.Window, worldToScreen pixel.Matrix) {
 // DrawLayer implements ent.Entity.
 func (b *BatchDraw) DrawLayer() int {
 	return -3
+}
+
+func (b *BatchDraw) Tags() []string {
+	return []string{b.tag}
 }

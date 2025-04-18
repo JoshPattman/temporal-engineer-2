@@ -11,17 +11,17 @@ import (
 
 func NewGame() Screen {
 	world := ent.NewWorld()
-	asteroidBatch := NewBatchDraw("asteroid.png")
 	world.Add(
 		NewCamera(),
 		NewStation(),
 		NewCompass(),
 		NewBackground(),
-		asteroidBatch,
+		NewBatchDraw("asteroid.png", "asteroid_batch"),
 		NewPlayer(),
+		NewAsteroidSpawner(),
 	)
-	for range 20 {
-		ast := NewAsteroid(asteroidBatch)
+	for range 5 {
+		ast := NewAsteroid(world)
 		ast.SetPosition(pixel.V(1, 0).Scaled(rand.Float64() * 10).Rotated(rand.Float64() * math.Pi * 2))
 		world.Add(ast)
 	}

@@ -12,7 +12,15 @@ import (
 var _ ent.ActivePhysicsBody = &Asteroid{}
 var _ ent.Entity = &Asteroid{}
 
-func NewAsteroid(batch *BatchDraw) *Asteroid {
+func NewAsteroid(world *ent.World) *Asteroid {
+	batch, ok := ent.First(
+		ent.FilterEntitiesByType[*BatchDraw](
+			world.ForTag("asteroid_batch"),
+		),
+	)
+	if !ok {
+		panic("cannot add asteroid without an asteroid batch present")
+	}
 	sprite := GlobalSpriteManager.FullSprite("asteroid.png")
 	return &Asteroid{
 		Transform: Transform{
@@ -96,4 +104,27 @@ func (a *Asteroid) Draw(win *pixelgl.Window, worldToScreen pixel.Matrix) {
 			worldToScreen,
 		),
 	)
+}
+
+var _ ent.Entity = &AsteroidSpawner{}
+
+func NewAsteroidSpawner() *AsteroidSpawner {
+	return &AsteroidSpawner{}
+}
+
+type AsteroidSpawner struct {
+	ent.EntityBase
+	timer float64
+}
+
+// Update implements ent.Entity.
+func (a *AsteroidSpawner) Update(win *pixelgl.Window, world *ent.World, dt float64) (toCreate []ent.Entity, toDestroy []ent.Entity) {
+	a.timer += dt
+	if a.timer > 1 {
+		a.timer = 0
+		return []ent.Entity{
+			NewAsteroid(world),
+		}, nil
+	}
+	return nil, nil
 }
