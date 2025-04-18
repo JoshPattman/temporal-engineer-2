@@ -77,7 +77,7 @@ func (a *Asteroid) Radius() float64 {
 	return a.radius
 }
 
-func (a *Asteroid) Update(win *pixelgl.Window, entities *ent.Entities, dt float64) ([]ent.Entity, []ent.Entity) {
+func (a *Asteroid) Update(win *pixelgl.Window, entities *ent.World, dt float64) ([]ent.Entity, []ent.Entity) {
 	fx := ent.BodyEffects{}
 	fx.Force = ent.CalculateDragForce(a.velocity, 0.5, 0)
 	ent.EulerStateUpdate(a, fx, dt)

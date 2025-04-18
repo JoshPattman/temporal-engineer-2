@@ -88,7 +88,7 @@ func (p *Player) Radius() float64 {
 	return p.radius
 }
 
-func (p *Player) Update(win *pixelgl.Window, entities *ent.Entities, dt float64) ([]ent.Entity, []ent.Entity) {
+func (p *Player) Update(win *pixelgl.Window, entities *ent.World, dt float64) ([]ent.Entity, []ent.Entity) {
 	if p.dead {
 		return []ent.Entity{
 				NewExplosion(p.pos),
@@ -210,7 +210,7 @@ func (e *Explosion) Tags() []string {
 }
 
 // Update implements ent.Entity.
-func (e *Explosion) Update(win *pixelgl.Window, all *ent.Entities, dt float64) (toCreate []ent.Entity, toDestroy []ent.Entity) {
+func (e *Explosion) Update(win *pixelgl.Window, all *ent.World, dt float64) (toCreate []ent.Entity, toDestroy []ent.Entity) {
 	e.timer += dt
 	if e.timer >= 0.5 {
 		return nil, []ent.Entity{e}

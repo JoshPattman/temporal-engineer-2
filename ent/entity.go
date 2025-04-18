@@ -7,7 +7,7 @@ import (
 
 type Entity interface {
 	// Called once per frame to update behaviour.
-	Update(win *pixelgl.Window, all *Entities, dt float64) (toCreate, toDestroy []Entity)
+	Update(win *pixelgl.Window, all *World, dt float64) (toCreate, toDestroy []Entity)
 	// Called before any Draw method is called on any entity.
 	// Should be used to ready self for drawing.
 	PreDraw(win *pixelgl.Window)
@@ -30,7 +30,7 @@ type Entity interface {
 // This is optional though
 type EntityBase struct{}
 
-func (*EntityBase) Update(win *pixelgl.Window, all *Entities, dt float64) (toCreate, toDestroy []Entity) {
+func (*EntityBase) Update(win *pixelgl.Window, all *World, dt float64) (toCreate, toDestroy []Entity) {
 	return nil, nil
 }
 

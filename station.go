@@ -44,7 +44,7 @@ func (s *Station) Tags() []string {
 }
 
 // Update implements ent.Entity.
-func (s *Station) Update(win *pixelgl.Window, all *ent.Entities, dt float64) (toCreate []ent.Entity, toDestroy []ent.Entity) {
+func (s *Station) Update(win *pixelgl.Window, all *ent.World, dt float64) (toCreate []ent.Entity, toDestroy []ent.Entity) {
 	s.spriteTimer += dt
 	return nil, nil
 }

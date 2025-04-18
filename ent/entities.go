@@ -8,60 +8,62 @@ import (
 	"github.com/gopxl/pixel/pixelgl"
 )
 
-type Entities struct {
+type World struct {
 	orderedByDraw   []Entity
 	orderedByUpdate []Entity
 	physicsBodies   []PhysicsBody
 	byTags          map[string][]Entity
 }
 
-func NewEntities() *Entities {
-	return &Entities{
+func NewWorld() *World {
+	return &World{
 		byTags: make(map[string][]Entity, 0),
 	}
 }
 
-func (es *Entities) Add(e Entity) {
-	{
-		inserted := false
-		for i := range es.orderedByDraw {
-			if e.DrawLayer() > es.orderedByDraw[i].DrawLayer() {
-				es.orderedByDraw = slices.Insert(es.orderedByDraw, i, e)
-				inserted = true
-				break
+func (es *World) Add(toAdd ...Entity) {
+	for _, e := range toAdd {
+		{
+			inserted := false
+			for i := range es.orderedByDraw {
+				if e.DrawLayer() > es.orderedByDraw[i].DrawLayer() {
+					es.orderedByDraw = slices.Insert(es.orderedByDraw, i, e)
+					inserted = true
+					break
+				}
+			}
+			if !inserted {
+				es.orderedByDraw = append(es.orderedByDraw, e)
 			}
 		}
-		if !inserted {
-			es.orderedByDraw = append(es.orderedByDraw, e)
-		}
-	}
-	{
-		inserted := false
-		for i := range es.orderedByUpdate {
-			if e.UpdateLayer() > es.orderedByUpdate[i].UpdateLayer() {
-				es.orderedByUpdate = slices.Insert(es.orderedByUpdate, i, e)
-				inserted = true
-				break
+		{
+			inserted := false
+			for i := range es.orderedByUpdate {
+				if e.UpdateLayer() > es.orderedByUpdate[i].UpdateLayer() {
+					es.orderedByUpdate = slices.Insert(es.orderedByUpdate, i, e)
+					inserted = true
+					break
+				}
+			}
+			if !inserted {
+				es.orderedByUpdate = append(es.orderedByUpdate, e)
 			}
 		}
-		if !inserted {
-			es.orderedByUpdate = append(es.orderedByUpdate, e)
-		}
-	}
-	{
-		for _, tag := range e.Tags() {
-			if _, ok := es.byTags[tag]; !ok {
-				es.byTags[tag] = make([]Entity, 0)
+		{
+			for _, tag := range e.Tags() {
+				if _, ok := es.byTags[tag]; !ok {
+					es.byTags[tag] = make([]Entity, 0)
+				}
+				es.byTags[tag] = append(es.byTags[tag], e)
 			}
-			es.byTags[tag] = append(es.byTags[tag], e)
 		}
-	}
-	if e, ok := e.(PhysicsBody); ok {
-		es.physicsBodies = append(es.physicsBodies, e)
+		if e, ok := e.(PhysicsBody); ok {
+			es.physicsBodies = append(es.physicsBodies, e)
+		}
 	}
 }
 
-func (es *Entities) Remove(e Entity) {
+func (es *World) Remove(e Entity) {
 	{
 		idx := slices.Index(es.orderedByDraw, e)
 		if idx == -1 {
@@ -94,7 +96,7 @@ func (es *Entities) Remove(e Entity) {
 	}
 }
 
-func (es *Entities) Has(e Entity) bool {
+func (es *World) Has(e Entity) bool {
 	for _, e2 := range es.orderedByUpdate {
 		if e == e2 {
 			return true
@@ -103,19 +105,19 @@ func (es *Entities) Has(e Entity) bool {
 	return false
 }
 
-func (es *Entities) ByDraw() iter.Seq[Entity] {
+func (es *World) ByDraw() iter.Seq[Entity] {
 	return All(es.orderedByDraw)
 }
 
-func (es *Entities) ByUpdate() iter.Seq[Entity] {
+func (es *World) ByUpdate() iter.Seq[Entity] {
 	return All(es.orderedByUpdate)
 }
 
-func (es *Entities) WithPhysics() iter.Seq[PhysicsBody] {
+func (es *World) WithPhysics() iter.Seq[PhysicsBody] {
 	return All(es.physicsBodies)
 }
 
-func (es *Entities) ForTag(tag string) iter.Seq[Entity] {
+func (es *World) ForTag(tag string) iter.Seq[Entity] {
 	if forTag, ok := es.byTags[tag]; ok {
 		return All(forTag)
 	} else {
@@ -123,7 +125,7 @@ func (es *Entities) ForTag(tag string) iter.Seq[Entity] {
 	}
 }
 
-func (es *Entities) Update(win *pixelgl.Window, dt float64) {
+func (es *World) Update(win *pixelgl.Window, dt float64) {
 	allToCreate := []Entity{}
 	allToRemove := []Entity{}
 	for e := range es.ByUpdate() {
@@ -158,13 +160,10 @@ func (es *Entities) Update(win *pixelgl.Window, dt float64) {
 	}
 }
 
-func (es *Entities) PreDraw(win *pixelgl.Window) {
+func (es *World) Draw(win *pixelgl.Window, worldToScreen pixel.Matrix) {
 	for e := range es.ByDraw() {
 		e.PreDraw(win)
 	}
-}
-
-func (es *Entities) Draw(win *pixelgl.Window, worldToScreen pixel.Matrix) {
 	for e := range es.ByDraw() {
 		e.Draw(win, worldToScreen)
 	}
