@@ -2,8 +2,6 @@ package main
 
 import (
 	"ent"
-	"math"
-	"math/rand"
 
 	"github.com/gopxl/pixel"
 	"github.com/gopxl/pixel/pixelgl"
@@ -20,11 +18,6 @@ func NewGame() Screen {
 		NewPlayer(),
 		NewAsteroidSpawner(),
 	)
-	for range 5 {
-		ast := NewAsteroid(world)
-		ast.SetPosition(pixel.V(1, 0).Scaled(rand.Float64() * 10).Rotated(rand.Float64() * math.Pi * 2))
-		world.Add(ast)
-	}
 	return &Game{
 		world: world,
 	}

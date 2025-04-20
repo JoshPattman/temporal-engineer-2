@@ -86,8 +86,22 @@ func (a *Asteroid) Radius() float64 {
 }
 
 func (a *Asteroid) Update(win *pixelgl.Window, entities *ent.World, dt float64) ([]ent.Entity, []ent.Entity) {
+	// Check if out of range of player, and delete if so
+	player, ok := ent.First(
+		ent.FilterEntitiesByType[*Player](
+			entities.ForTag("player"),
+		),
+	)
+	if ok {
+		dist := player.Position().To(a.Position()).Len()
+		if dist > 40 {
+			return nil, []ent.Entity{a}
+		}
+	}
+
+	// Physics
 	fx := ent.BodyEffects{}
-	fx.Force = ent.CalculateDragForce(a.velocity, 0.5, 0)
+	//fx.Force = ent.CalculateDragForce(a.velocity, 0.5, 0)
 	ent.EulerStateUpdate(a, fx, dt)
 	return nil, nil
 }
@@ -119,11 +133,24 @@ type AsteroidSpawner struct {
 
 // Update implements ent.Entity.
 func (a *AsteroidSpawner) Update(win *pixelgl.Window, world *ent.World, dt float64) (toCreate []ent.Entity, toDestroy []ent.Entity) {
+	player, ok := ent.First(
+		ent.FilterEntitiesByType[*Player](
+			world.ForTag("player"),
+		),
+	)
+	if !ok {
+		return nil, nil
+	}
 	a.timer += dt
-	if a.timer > 1 {
+	if a.timer > 0.2 {
 		a.timer = 0
+		asteroid := NewAsteroid(world)
+		state := asteroid.State()
+		state.Velocity = pixel.V(3+rand.Float64()*7, 0).Rotated(rand.Float64() * math.Pi * 2)
+		state.Position = player.Position().Add(pixel.V(35, 0).Rotated(rand.Float64() * math.Pi * 2))
+		asteroid.SetState(state)
 		return []ent.Entity{
-			NewAsteroid(world),
+			asteroid,
 		}, nil
 	}
 	return nil, nil
