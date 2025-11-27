@@ -8,8 +8,6 @@ import (
 	"path"
 
 	"github.com/gopxl/pixel"
-
-	_ "image/png"
 )
 
 func NewSpriteManager(root string) *SpriteManager {

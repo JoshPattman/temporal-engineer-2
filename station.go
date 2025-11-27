@@ -22,7 +22,6 @@ func NewStation() *Station {
 
 type Station struct {
 	ent.EntityBase
-	pos         pixel.Vec
 	sprites     []*pixel.Sprite
 	spriteTimer float64
 }

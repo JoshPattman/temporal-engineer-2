@@ -17,6 +17,7 @@ func NewGame() Screen {
 		NewBatchDraw("asteroid.png", "asteroid_batch"),
 		NewPlayer(),
 		NewAsteroidSpawner(),
+		NewSheildsIndicator(),
 	)
 	return &Game{
 		world: world,

@@ -161,6 +161,10 @@ func (p *Player) OnCollision(col ent.Collision) {
 	}
 }
 
+func (p *Player) Shields() int {
+	return p.sheilds
+}
+
 func NewExplosion(at pixel.Vec) *Explosion {
 	sprites := GlobalSpriteManager.TiledSprites(
 		"boom.png",
