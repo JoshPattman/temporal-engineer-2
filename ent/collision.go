@@ -2,6 +2,7 @@ package ent
 
 import "github.com/gopxl/pixel"
 
+// All the information about a collision that was detected by the physics engine.
 type Collision struct {
 	Self   PhysicsBody
 	Other  PhysicsBody
@@ -9,10 +10,13 @@ type Collision struct {
 	Point  pixel.Vec
 }
 
+// An interface that is able to listen to collisions.
 type CollisionListener interface {
+	// Additional logic to be run after a collision is detected and resolved.
 	OnCollision(Collision)
 }
 
+// Flip the observer and self of the collision, and also the normal.
 func (c Collision) ForOther() Collision {
 	return Collision{
 		Self:   c.Other,
@@ -113,6 +117,8 @@ func checkActiveAndKinematicBodies(a ActivePhysicsBody, b PhysicsBody) (Collisio
 	}, true
 }
 
+// Perform a collision physics update on the set of bodies.
+// Perform corrections to overlapping objects, and returns collisions to be passed to handlers.
 func StatelessCollisionPhysics(bodies []PhysicsBody) []Collision {
 	// Sort bodies
 	kinematicBodies := make([]PhysicsBody, 0)

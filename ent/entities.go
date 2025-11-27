@@ -8,6 +8,7 @@ import (
 	"github.com/gopxl/pixel/pixelgl"
 )
 
+// A collection of entities that can be indexed and updated in various ways.
 type World struct {
 	allEntities     *index[Entity]
 	orderedByDraw   *index[Drawer]
@@ -16,6 +17,7 @@ type World struct {
 	byTags          map[string][]Entity
 }
 
+// Create a new, empty, world.
 func NewWorld() *World {
 	return &World{
 		allEntities:     newUnorderedIndex[Entity](),
@@ -26,9 +28,15 @@ func NewWorld() *World {
 	}
 }
 
+// Add the entities to the world, adding it to all relevant indexes.
+// The entity tags at this point in time will now be used of the entity.
+// Each entity can only be added to the world once.
 func (es *World) Add(toAdd ...Entity) {
 	for _, e := range toAdd {
-		es.allEntities.tryAdd(e)
+		ok := es.allEntities.tryAdd(e)
+		if !ok {
+			continue
+		}
 		es.orderedByDraw.tryAdd(e)
 		es.orderedByUpdate.tryAdd(e)
 		es.physicsBodies.tryAdd(e)
@@ -43,8 +51,13 @@ func (es *World) Add(toAdd ...Entity) {
 	}
 }
 
+// Remove the entity from the world.
+// If the entity is not there, this will be a no-op.
 func (es *World) Remove(e Entity) {
-	es.allEntities.tryRemove(e)
+	ok := es.allEntities.tryRemove(e)
+	if !ok {
+		return
+	}
 	es.orderedByDraw.tryRemove(e)
 	es.orderedByUpdate.tryRemove(e)
 	es.physicsBodies.tryRemove(e)
@@ -59,6 +72,7 @@ func (es *World) Remove(e Entity) {
 	}
 }
 
+// Does the world contain this entity already?
 func (es *World) Has(e Entity) bool {
 	for e2 := range es.allEntities.All() {
 		if e == e2 {
@@ -68,14 +82,19 @@ func (es *World) Has(e Entity) bool {
 	return false
 }
 
+// Get all the entities for the given tag.
 func (es *World) ForTag(tag string) iter.Seq[Entity] {
 	if forTag, ok := es.byTags[tag]; ok {
-		return All(forTag)
+		return slices.Values(forTag)
 	} else {
 		return func(yield func(Entity) bool) {}
 	}
 }
 
+// Update the world at the provided time interval.
+// First, run all update steps.
+// Then, add and remove all new entities.
+// Finally, resolve physics then run collision handlers.
 func (es *World) Update(win *pixelgl.Window, dt float64) {
 	allToCreate := []Entity{}
 	allToRemove := []Entity{}
@@ -111,6 +130,8 @@ func (es *World) Update(win *pixelgl.Window, dt float64) {
 	}
 }
 
+// Call predraw on all entities, then call draw.
+// Pass the provided world to screen mapping to all draw calls.
 func (es *World) Draw(win *pixelgl.Window, worldToScreen pixel.Matrix) {
 	for e := range es.orderedByDraw.All() {
 		e.PreDraw(win)
@@ -172,5 +193,5 @@ func (index *index[T]) tryRemove(item any) bool {
 }
 
 func (index *index[T]) All() iter.Seq[T] {
-	return All(index.items)
+	return slices.Values(index.items)
 }

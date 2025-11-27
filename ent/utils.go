@@ -2,6 +2,7 @@ package ent
 
 import "iter"
 
+// Filter the iterator of entities to only those of the given type.
 func FilterEntitiesByType[T any](xs iter.Seq[Entity]) iter.Seq[T] {
 	return func(yield func(T) bool) {
 		next, stop := iter.Pull(xs)
@@ -23,16 +24,7 @@ func FilterEntitiesByType[T any](xs iter.Seq[Entity]) iter.Seq[T] {
 	}
 }
 
-func All[T any](xs []T) iter.Seq[T] {
-	return func(yield func(T) bool) {
-		for _, item := range xs {
-			if !yield(item) {
-				return
-			}
-		}
-	}
-}
-
+// Get the first item, or if there are no items return false.
 func First[T any](xs iter.Seq[T]) (T, bool) {
 	for t := range xs {
 		return t, true
