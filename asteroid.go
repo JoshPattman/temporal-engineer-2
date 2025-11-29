@@ -85,6 +85,10 @@ func (a *Asteroid) Radius() float64 {
 	return a.radius
 }
 
+func (a *Asteroid) Tags() []string {
+	return []string{"asteroid"}
+}
+
 func (a *Asteroid) Update(win *pixelgl.Window, entities *ent.World, dt float64) ([]ent.Entity, []ent.Entity) {
 	// Check if out of range of player, and delete if so
 	player, ok := ent.First(

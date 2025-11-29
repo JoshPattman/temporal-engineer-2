@@ -1,6 +1,11 @@
 package ent
 
-import "iter"
+import (
+	"iter"
+	"math"
+
+	"github.com/gopxl/pixel"
+)
 
 // Filter the iterator of entities to only those of the given type.
 func FilterEntitiesByType[T any](xs iter.Seq[Entity]) iter.Seq[T] {
@@ -30,4 +35,26 @@ func First[T any](xs iter.Seq[T]) (T, bool) {
 		return t, true
 	}
 	return *new(T), false
+}
+
+type Positioner interface {
+	Position() pixel.Vec
+}
+
+// Get the closest transform
+func Closest[T Positioner](pos pixel.Vec, xs iter.Seq[T]) (T, bool) {
+	var c T
+	d := math.Inf(1)
+	for item := range xs {
+		dist := item.Position().To(pos).Len()
+		if dist < d {
+			d = dist
+			c = item
+		}
+	}
+	if math.IsInf(d, 1) {
+		return *new(T), false
+	} else {
+		return c, true
+	}
 }

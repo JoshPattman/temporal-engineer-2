@@ -41,6 +41,7 @@ type Player struct {
 	bubbleTimer      float64
 	sheilds          int
 	dead             bool
+	miningPos        pixel.Vec
 }
 
 // Elasticity implements ent.ActivePhysicsBody.
@@ -97,6 +98,11 @@ func (p *Player) Update(win *pixelgl.Window, entities *ent.World, dt float64) ([
 				p,
 			}
 	}
+	asteroids := ent.FilterEntitiesByType[*Asteroid](entities.ForTag("asteroid"))
+	ass, ok := ent.Closest(p.Position(), asteroids)
+	if ok {
+		p.miningPos = ass.Position()
+	}
 	fx := ent.BodyEffects{}
 
 	if win.Pressed(pixelgl.KeyW) {
@@ -139,6 +145,10 @@ func (p *Player) Draw(win *pixelgl.Window, worldToScreen pixel.Matrix) {
 			pixel.Alpha(p.bubbleTimer/0.5),
 		)
 	}
+	t := NewTether()
+	t.end = p.pos
+	t.start = p.miningPos
+	t.Draw(win, worldToScreen)
 }
 
 func (p *Player) Tags() []string {
@@ -224,4 +234,27 @@ func (e *Explosion) Update(win *pixelgl.Window, all *ent.World, dt float64) (toC
 
 func (e *Explosion) Position() pixel.Vec {
 	return e.pos
+}
+
+func NewTether() *Tether {
+	return &Tether{
+		sprite: GlobalSpriteManager.FullSprite("tether.png"),
+	}
+}
+
+type Tether struct {
+	start  pixel.Vec
+	end    pixel.Vec
+	sprite *pixel.Sprite
+}
+
+func (e *Tether) Draw(win *pixelgl.Window, worldToScreen pixel.Matrix) {
+	dist := e.start.To(e.end).Len()
+	if dist == 0 {
+		return
+	}
+	e.sprite.Draw(
+		win,
+		pixel.IM.Scaled(pixel.ZV, 1.0/16.0).Moved(pixel.V(0.5, 0)).ScaledXY(pixel.ZV, pixel.V(dist, 1)).Rotated(pixel.ZV, e.start.To(e.end).Angle()).Moved(e.start).Chained(worldToScreen),
+	)
 }
