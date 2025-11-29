@@ -124,6 +124,37 @@ func (a *Asteroid) Draw(win *pixelgl.Window, worldToScreen pixel.Matrix) {
 	)
 }
 
+func NewMineableAsteroid(world *ent.World) *MineableAsteroid {
+	batch, ok := ent.First(
+		ent.OfType[*BatchDraw](
+			world.ForTag("mineable_asteroid_batch"),
+		),
+	)
+	if !ok {
+		panic("cannot add asteroid without an asteroid batch present")
+	}
+	sprite := GlobalSpriteManager.FullSprite("asteroid-mineable.png")
+	return &MineableAsteroid{
+		Asteroid: Asteroid{
+			Transform: Transform{
+				pos: pixel.V(rand.Float64()*100, rand.Float64()*100),
+			},
+			sprite:   sprite,
+			velocity: pixel.V(0.5, 0).Rotated(rand.Float64() * math.Pi * 2),
+			radius:   rand.Float64()*1.5 + 0.5,
+			batch:    batch.Batch,
+		},
+	}
+}
+
+type MineableAsteroid struct {
+	Asteroid
+}
+
+func (a *MineableAsteroid) Tags() []string {
+	return []string{"mineable_asteroid"}
+}
+
 var _ ent.Entity = &AsteroidSpawner{}
 
 func NewAsteroidSpawner() *AsteroidSpawner {
@@ -148,13 +179,19 @@ func (a *AsteroidSpawner) Update(win *pixelgl.Window, world *ent.World, dt float
 	a.timer += dt
 	if a.timer > 0.2 {
 		a.timer = 0
-		asteroid := NewAsteroid(world)
+		var asteroid ent.ActivePhysicsBody
+
+		if rand.Float64() > 0.2 {
+			asteroid = NewAsteroid(world)
+		} else {
+			asteroid = NewMineableAsteroid(world)
+		}
 		state := asteroid.State()
 		state.Velocity = pixel.V(3+rand.Float64()*7, 0).Rotated(rand.Float64() * math.Pi * 2)
 		state.Position = player.Position().Add(pixel.V(35, 0).Rotated(rand.Float64() * math.Pi * 2))
 		asteroid.SetState(state)
 		return []ent.Entity{
-			asteroid,
+			asteroid.(ent.Entity),
 		}, nil
 	}
 	return nil, nil

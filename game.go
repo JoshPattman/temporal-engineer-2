@@ -15,6 +15,7 @@ func NewGame() Screen {
 		NewCompass(),
 		NewBackground(),
 		NewBatchDraw("asteroid.png", "asteroid_batch"),
+		NewBatchDraw("asteroid-mineable.png", "mineable_asteroid_batch"),
 		NewPlayer(),
 		NewAsteroidSpawner(),
 		NewSheildsIndicator(),

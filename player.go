@@ -152,19 +152,19 @@ func (p *Player) Update(win *pixelgl.Window, entities *ent.World, dt float64) ([
 	return nil, nil
 }
 
-func (p *Player) getTargetAsteroid(entities *ent.World) (*Asteroid, bool) {
+func (p *Player) getTargetAsteroid(entities *ent.World) (*MineableAsteroid, bool) {
 	return ent.First(
-		ent.OfType[*Asteroid](
+		ent.OfType[*MineableAsteroid](
 			entities.ForTag("player_target"),
 		),
 	)
 }
 
-func (p *Player) selectClosestAsteroid(entities *ent.World) (*Asteroid, bool) {
+func (p *Player) selectClosestAsteroid(entities *ent.World) (*MineableAsteroid, bool) {
 	return ent.Closest(
 		p.Position(),
-		ent.OfType[*Asteroid](
-			entities.ForTag("asteroid"),
+		ent.OfType[*MineableAsteroid](
+			entities.ForTag("mineable_asteroid"),
 		),
 	)
 }
