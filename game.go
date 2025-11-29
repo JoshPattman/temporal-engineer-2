@@ -37,7 +37,7 @@ func (g *Game) Draw(win *pixelgl.Window) {
 	// Get matrix to transform workd to screen pos
 	camMat := pixel.IM.Scaled(pixel.ZV, 20).Moved(win.Bounds().Center())
 	camera, ok := ent.First(
-		ent.FilterEntitiesByType[CameraTarget](
+		ent.OfType[CameraTarget](
 			g.world.ForTag("camera"),
 		),
 	)

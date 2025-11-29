@@ -14,7 +14,7 @@ var _ ent.Entity = &Asteroid{}
 
 func NewAsteroid(world *ent.World) *Asteroid {
 	batch, ok := ent.First(
-		ent.FilterEntitiesByType[*BatchDraw](
+		ent.OfType[*BatchDraw](
 			world.ForTag("asteroid_batch"),
 		),
 	)
@@ -92,7 +92,7 @@ func (a *Asteroid) Tags() []string {
 func (a *Asteroid) Update(win *pixelgl.Window, entities *ent.World, dt float64) ([]ent.Entity, []ent.Entity) {
 	// Check if out of range of player, and delete if so
 	player, ok := ent.First(
-		ent.FilterEntitiesByType[*Player](
+		ent.OfType[*Player](
 			entities.ForTag("player"),
 		),
 	)
@@ -138,7 +138,7 @@ type AsteroidSpawner struct {
 // Update implements ent.Entity.
 func (a *AsteroidSpawner) Update(win *pixelgl.Window, world *ent.World, dt float64) (toCreate []ent.Entity, toDestroy []ent.Entity) {
 	player, ok := ent.First(
-		ent.FilterEntitiesByType[*Player](
+		ent.OfType[*Player](
 			world.ForTag("player"),
 		),
 	)

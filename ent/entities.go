@@ -40,13 +40,11 @@ func (es *World) Add(toAdd ...Entity) {
 		es.orderedByDraw.tryAdd(e)
 		es.orderedByUpdate.tryAdd(e)
 		es.physicsBodies.tryAdd(e)
-		{
-			for _, tag := range e.Tags() {
-				if _, ok := es.byTags[tag]; !ok {
-					es.byTags[tag] = make([]Entity, 0)
-				}
-				es.byTags[tag] = append(es.byTags[tag], e)
+		for _, tag := range e.Tags() {
+			if _, ok := es.byTags[tag]; !ok {
+				es.byTags[tag] = make([]Entity, 0)
 			}
+			es.byTags[tag] = append(es.byTags[tag], e)
 		}
 	}
 }
@@ -61,13 +59,13 @@ func (es *World) Remove(e Entity) {
 	es.orderedByDraw.tryRemove(e)
 	es.orderedByUpdate.tryRemove(e)
 	es.physicsBodies.tryRemove(e)
-	{
-		for _, tag := range e.Tags() {
-			idx := slices.Index(es.byTags[tag], e)
-			if idx == -1 {
-				panic("was not in entities")
-			}
+	for tag, entities := range es.byTags {
+		idx := slices.Index(entities, e)
+		if idx != -1 {
 			es.byTags[tag] = slices.Delete(es.byTags[tag], idx, idx+1)
+			if len(es.byTags[tag]) == 0 {
+				delete(es.byTags, tag)
+			}
 		}
 	}
 }
@@ -88,6 +86,31 @@ func (es *World) ForTag(tag string) iter.Seq[Entity] {
 		return slices.Values(forTag)
 	} else {
 		return func(yield func(Entity) bool) {}
+	}
+}
+
+// Add the tags to the specific object.
+func (es *World) AddTags(e Entity, tags ...string) {
+	for _, tag := range tags {
+		if _, ok := es.byTags[tag]; !ok {
+			es.byTags[tag] = make([]Entity, 0)
+		}
+		if !slices.Contains(es.byTags[tag], e) {
+			es.byTags[tag] = append(es.byTags[tag], e)
+		}
+	}
+}
+
+// Remove the tags from the specific object.
+func (es *World) RemoveTags(e Entity, tags ...string) {
+	for _, tag := range tags {
+		idx := slices.Index(es.byTags[tag], e)
+		if idx != -1 {
+			es.byTags[tag] = slices.Delete(es.byTags[tag], idx, idx+1)
+			if len(es.byTags[tag]) == 0 {
+				delete(es.byTags, tag)
+			}
+		}
 	}
 }
 

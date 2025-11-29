@@ -65,7 +65,7 @@ func (c *ShieldsIndicator) DrawLayer() int {
 // Update implements ent.Entity.
 func (c *ShieldsIndicator) Update(win *pixelgl.Window, all *ent.World, dt float64) (toCreate []ent.Entity, toDestroy []ent.Entity) {
 	player, ok := ent.First(
-		ent.FilterEntitiesByType[*Player](
+		ent.OfType[*Player](
 			all.ForTag("player"),
 		),
 	)

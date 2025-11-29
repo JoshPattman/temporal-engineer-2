@@ -42,6 +42,7 @@ type Player struct {
 	sheilds          int
 	dead             bool
 	miningPos        pixel.Vec
+	mining           bool
 }
 
 // Elasticity implements ent.ActivePhysicsBody.
@@ -90,6 +91,7 @@ func (p *Player) Radius() float64 {
 }
 
 func (p *Player) Update(win *pixelgl.Window, entities *ent.World, dt float64) ([]ent.Entity, []ent.Entity) {
+	// Deal with dead player
 	if p.dead {
 		return []ent.Entity{
 				NewExplosion(p.pos),
@@ -98,13 +100,39 @@ func (p *Player) Update(win *pixelgl.Window, entities *ent.World, dt float64) ([
 				p,
 			}
 	}
-	asteroids := ent.FilterEntitiesByType[*Asteroid](entities.ForTag("asteroid"))
-	ass, ok := ent.Closest(p.Position(), asteroids)
-	if ok {
-		p.miningPos = ass.Position()
+	// Handle state changes of mining
+	if win.JustPressed(pixelgl.KeySpace) {
+		_, ok := p.getTargetAsteroid(entities)
+		if !ok {
+			asteroid, ok := p.selectClosestAsteroid(entities)
+			if ok {
+				entities.AddTags(asteroid, "player_target")
+			}
+		}
+		p.mining = true
+	} else if win.JustReleased(pixelgl.KeySpace) {
+		asteroid, ok := p.getTargetAsteroid(entities)
+		if ok {
+			entities.RemoveTags(asteroid, "player_target")
+		}
+		p.mining = false
 	}
-	fx := ent.BodyEffects{}
 
+	// Handle mining
+	if p.mining {
+		asteroid, ok := p.getTargetAsteroid(entities)
+		if !ok {
+			p.mining = false
+		} else if asteroid.Position().To(p.Position()).Len() > 10 {
+			p.mining = false
+			entities.RemoveTags(asteroid, "player_target")
+		} else {
+			p.miningPos = asteroid.Position()
+		}
+	}
+
+	// Handle ship movement
+	fx := ent.BodyEffects{}
 	if win.Pressed(pixelgl.KeyW) {
 		fx.Force = fx.Force.Add(p.Forward().Scaled(p.boosterForce))
 	}
@@ -114,15 +142,31 @@ func (p *Player) Update(win *pixelgl.Window, entities *ent.World, dt float64) ([
 	if win.Pressed(pixelgl.KeyD) {
 		fx.Torque -= p.boosterTorue
 	}
-
 	fx.Force = fx.Force.Add(ent.CalculateDragForce(p.velocity, p.linearDragCoeff, 0.5))
 	fx.Torque += ent.CalculateDragTorque(p.angularSpeed, p.angularDragCoeff, 0.8)
-
 	ent.EulerStateUpdate(p, fx, dt)
 
+	// Handle timers
 	p.lastDamageTimer += dt
 	p.bubbleTimer -= dt
 	return nil, nil
+}
+
+func (p *Player) getTargetAsteroid(entities *ent.World) (*Asteroid, bool) {
+	return ent.First(
+		ent.OfType[*Asteroid](
+			entities.ForTag("player_target"),
+		),
+	)
+}
+
+func (p *Player) selectClosestAsteroid(entities *ent.World) (*Asteroid, bool) {
+	return ent.Closest(
+		p.Position(),
+		ent.OfType[*Asteroid](
+			entities.ForTag("asteroid"),
+		),
+	)
 }
 
 func (p *Player) Draw(win *pixelgl.Window, worldToScreen pixel.Matrix) {
@@ -145,10 +189,12 @@ func (p *Player) Draw(win *pixelgl.Window, worldToScreen pixel.Matrix) {
 			pixel.Alpha(p.bubbleTimer/0.5),
 		)
 	}
-	t := NewTether()
-	t.end = p.pos
-	t.start = p.miningPos
-	t.Draw(win, worldToScreen)
+	if p.mining {
+		t := NewTether()
+		t.end = p.pos
+		t.start = p.miningPos
+		t.Draw(win, worldToScreen)
+	}
 }
 
 func (p *Player) Tags() []string {

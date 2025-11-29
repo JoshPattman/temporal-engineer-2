@@ -34,7 +34,7 @@ func (c *Camera) Tags() []string {
 // Update implements ent.Entity.
 func (c *Camera) Update(win *pixelgl.Window, all *ent.World, dt float64) (toCreate []ent.Entity, toDestroy []ent.Entity) {
 	target, ok := ent.First(
-		ent.FilterEntitiesByType[CameraTarget](
+		ent.OfType[CameraTarget](
 			all.ForTag("player_camera_target"),
 		),
 	)
