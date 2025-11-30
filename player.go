@@ -43,6 +43,8 @@ type Player struct {
 	dead             bool
 	miningPos        pixel.Vec
 	mining           bool
+	lastInvertTimer  float64
+	invert           bool
 }
 
 // Elasticity implements ent.ActivePhysicsBody.
@@ -91,6 +93,11 @@ func (p *Player) Radius() float64 {
 }
 
 func (p *Player) Update(win *pixelgl.Window, entities *ent.World, dt float64) ([]ent.Entity, []ent.Entity) {
+	p.lastInvertTimer += dt
+	if p.lastInvertTimer > 0.2 {
+		p.lastInvertTimer = 0
+		p.invert = !p.invert
+	}
 	// Deal with dead player
 	if p.dead {
 		return []ent.Entity{
@@ -170,6 +177,13 @@ func (p *Player) selectClosestAsteroid(entities *ent.World) (*Asteroid, bool) {
 }
 
 func (p *Player) Draw(win *pixelgl.Window, _ *ent.World, worldToScreen pixel.Matrix) {
+	if p.mining {
+		t := NewTether()
+		t.end = p.pos
+		t.start = p.miningPos
+		t.inverted = p.invert
+		t.Draw(win, worldToScreen)
+	}
 	drawMat := pixel.IM.Scaled(
 		pixel.ZV,
 		p.radius*2.0/p.sprite.Frame().W(),
@@ -188,12 +202,6 @@ func (p *Player) Draw(win *pixelgl.Window, _ *ent.World, worldToScreen pixel.Mat
 			pixel.IM.Scaled(pixel.ZV, 0.6).Chained(drawMat),
 			pixel.Alpha(p.bubbleTimer/0.5),
 		)
-	}
-	if p.mining {
-		t := NewTether()
-		t.end = p.pos
-		t.start = p.miningPos
-		t.Draw(win, worldToScreen)
 	}
 }
 
@@ -281,9 +289,10 @@ func NewTether() *Tether {
 }
 
 type Tether struct {
-	start  pixel.Vec
-	end    pixel.Vec
-	sprite *pixel.Sprite
+	start    pixel.Vec
+	end      pixel.Vec
+	sprite   *pixel.Sprite
+	inverted bool
 }
 
 func (e *Tether) Draw(win *pixelgl.Window, worldToScreen pixel.Matrix) {
@@ -291,8 +300,12 @@ func (e *Tether) Draw(win *pixelgl.Window, worldToScreen pixel.Matrix) {
 	if dist == 0 {
 		return
 	}
+	yScale := 1.0
+	if e.inverted {
+		yScale = -1.0
+	}
 	e.sprite.Draw(
 		win,
-		pixel.IM.Scaled(pixel.ZV, 1.0/16.0).Moved(pixel.V(0.5, 0)).ScaledXY(pixel.ZV, pixel.V(dist, 1)).Rotated(pixel.ZV, e.start.To(e.end).Angle()).Moved(e.start).Chained(worldToScreen),
+		pixel.IM.Scaled(pixel.ZV, 1.0/16.0).Moved(pixel.V(0.5, 0)).ScaledXY(pixel.ZV, pixel.V(dist, yScale)).Rotated(pixel.ZV, e.start.To(e.end).Angle()).Moved(e.start).Chained(worldToScreen),
 	)
 }
