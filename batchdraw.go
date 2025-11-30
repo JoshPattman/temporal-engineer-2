@@ -31,7 +31,7 @@ func (b *BatchDraw) PreDraw(win *pixelgl.Window) {
 }
 
 // Draw implements ent.Entity.
-func (b *BatchDraw) Draw(win *pixelgl.Window, worldToScreen pixel.Matrix) {
+func (b *BatchDraw) Draw(win *pixelgl.Window, _ *ent.World, worldToScreen pixel.Matrix) {
 	b.Batch.Draw(win)
 }
 
@@ -40,6 +40,6 @@ func (b *BatchDraw) DrawLayer() int {
 	return -3
 }
 
-func (b *BatchDraw) Tags() []string {
-	return []string{b.tag}
+func (b *BatchDraw) AfterAdd(world *ent.World) {
+	world.AddTags(b, b.tag)
 }

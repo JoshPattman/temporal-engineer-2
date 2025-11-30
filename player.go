@@ -152,24 +152,24 @@ func (p *Player) Update(win *pixelgl.Window, entities *ent.World, dt float64) ([
 	return nil, nil
 }
 
-func (p *Player) getTargetAsteroid(entities *ent.World) (*MineableAsteroid, bool) {
+func (p *Player) getTargetAsteroid(entities *ent.World) (*Asteroid, bool) {
 	return ent.First(
-		ent.OfType[*MineableAsteroid](
+		ent.OfType[*Asteroid](
 			entities.ForTag("player_target"),
 		),
 	)
 }
 
-func (p *Player) selectClosestAsteroid(entities *ent.World) (*MineableAsteroid, bool) {
+func (p *Player) selectClosestAsteroid(entities *ent.World) (*Asteroid, bool) {
 	return ent.Closest(
 		p.Position(),
-		ent.OfType[*MineableAsteroid](
+		ent.OfType[*Asteroid](
 			entities.ForTag("mineable_asteroid"),
 		),
 	)
 }
 
-func (p *Player) Draw(win *pixelgl.Window, worldToScreen pixel.Matrix) {
+func (p *Player) Draw(win *pixelgl.Window, _ *ent.World, worldToScreen pixel.Matrix) {
 	drawMat := pixel.IM.Scaled(
 		pixel.ZV,
 		p.radius*2.0/p.sprite.Frame().W(),
@@ -197,11 +197,8 @@ func (p *Player) Draw(win *pixelgl.Window, worldToScreen pixel.Matrix) {
 	}
 }
 
-func (p *Player) Tags() []string {
-	return []string{
-		"player",
-		"player_camera_target",
-	}
+func (p *Player) AfterAdd(w *ent.World) {
+	w.AddTags(p, "player", "player_camera_target")
 }
 
 func (p *Player) OnCollision(col ent.Collision) {
@@ -255,18 +252,13 @@ type Explosion struct {
 }
 
 // Draw implements ent.Entity.
-func (e *Explosion) Draw(win *pixelgl.Window, worldToScreen pixel.Matrix) {
+func (e *Explosion) Draw(win *pixelgl.Window, _ *ent.World, worldToScreen pixel.Matrix) {
 	idx := int(e.timer / 0.5 * float64(len(e.sprites)))
 	s := e.sprites[idx]
 	s.Draw(
 		win,
 		pixel.IM.Scaled(pixel.ZV, 0.1).Moved(e.pos).Chained(worldToScreen),
 	)
-}
-
-// Tags implements ent.Entity.
-func (e *Explosion) Tags() []string {
-	return []string{"player_camera_target"}
 }
 
 // Update implements ent.Entity.

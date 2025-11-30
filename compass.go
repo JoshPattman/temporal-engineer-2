@@ -24,7 +24,7 @@ type Compass struct {
 }
 
 // Draw implements ent.Entity.
-func (c *Compass) Draw(win *pixelgl.Window, worldToScreen pixel.Matrix) {
+func (c *Compass) Draw(win *pixelgl.Window, _ *ent.World, worldToScreen pixel.Matrix) {
 	c.sprite.Draw(win, pixel.IM.Rotated(
 		pixel.ZV, c.angle+math.Pi/2,
 	).Scaled(

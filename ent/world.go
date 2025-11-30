@@ -40,12 +40,7 @@ func (es *World) Add(toAdd ...Entity) {
 		es.orderedByDraw.tryAdd(e)
 		es.orderedByUpdate.tryAdd(e)
 		es.physicsBodies.tryAdd(e)
-		for _, tag := range e.Tags() {
-			if _, ok := es.byTags[tag]; !ok {
-				es.byTags[tag] = make([]Entity, 0)
-			}
-			es.byTags[tag] = append(es.byTags[tag], e)
-		}
+		e.AfterAdd(es)
 	}
 }
 
@@ -160,7 +155,7 @@ func (es *World) Draw(win *pixelgl.Window, worldToScreen pixel.Matrix) {
 		e.PreDraw(win)
 	}
 	for e := range es.orderedByDraw.All() {
-		e.Draw(win, worldToScreen)
+		e.Draw(win, es, worldToScreen)
 	}
 }
 

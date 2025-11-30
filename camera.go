@@ -26,9 +26,8 @@ type CameraTarget interface {
 	Position() pixel.Vec
 }
 
-// Tags implements ent.Entity.
-func (c *Camera) Tags() []string {
-	return []string{"camera"}
+func (c *Camera) AfterAdd(world *ent.World) {
+	world.AddTags(c, "camera")
 }
 
 // Update implements ent.Entity.

@@ -29,7 +29,7 @@ type ShieldsIndicator struct {
 }
 
 // Draw implements ent.Entity.
-func (c *ShieldsIndicator) Draw(win *pixelgl.Window, worldToScreen pixel.Matrix) {
+func (c *ShieldsIndicator) Draw(win *pixelgl.Window, _ *ent.World, worldToScreen pixel.Matrix) {
 	c.sprite.Draw(
 		win,
 		pixel.IM.Scaled(

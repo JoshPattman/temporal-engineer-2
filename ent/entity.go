@@ -11,7 +11,7 @@ type Drawer interface {
 	// Should be used to ready self for drawing.
 	PreDraw(win *pixelgl.Window)
 	// Called to draw self to screen.
-	Draw(win *pixelgl.Window, worldToScreen pixel.Matrix)
+	Draw(win *pixelgl.Window, world *World, worldToScreen pixel.Matrix)
 	// Called to get the draw layer for this entity.
 	// Higher values will be drawn first (appear below other objects).
 	// Should NEVER change after entity has been created.
@@ -30,19 +30,17 @@ type Updater interface {
 
 // An object that can be added to a world.
 type Entity interface {
-	// Gets the tags of this entity.
-	// Should NEVER change after entity has been created.
-	Tags() []string
+	AfterAdd(*World)
 }
 
 // You may optionally inherit this to give an entity some default behaviour.
 type EntityBase struct{}
 
-func (*EntityBase) Update(win *pixelgl.Window, all *World, dt float64) (toCreate, toDestroy []Entity) {
+func (*EntityBase) Update(win *pixelgl.Window, world *World, dt float64) (toCreate, toDestroy []Entity) {
 	return nil, nil
 }
-func (*EntityBase) PreDraw(win *pixelgl.Window)                          {}
-func (*EntityBase) Draw(win *pixelgl.Window, worldToScreen pixel.Matrix) {}
-func (*EntityBase) Tags() []string                                       { return nil }
-func (*EntityBase) UpdateLayer() int                                     { return 0 }
-func (*EntityBase) DrawLayer() int                                       { return 0 }
+func (*EntityBase) PreDraw(win *pixelgl.Window)                                        {}
+func (*EntityBase) Draw(win *pixelgl.Window, world *World, worldToScreen pixel.Matrix) {}
+func (*EntityBase) UpdateLayer() int                                                   { return 0 }
+func (*EntityBase) DrawLayer() int                                                     { return 0 }
+func (*EntityBase) AfterAdd(*World)                                                    {}

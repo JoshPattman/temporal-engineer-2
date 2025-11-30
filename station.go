@@ -27,7 +27,7 @@ type Station struct {
 }
 
 // Draw implements ent.Entity.
-func (s *Station) Draw(win *pixelgl.Window, worldToScreen pixel.Matrix) {
+func (s *Station) Draw(win *pixelgl.Window, _ *ent.World, worldToScreen pixel.Matrix) {
 	spriteIdx := int(s.spriteTimer*0.5) % len(s.sprites)
 	s.sprites[spriteIdx].Draw(win, pixel.IM.Scaled(pixel.ZV, 0.1).Chained(worldToScreen))
 }
@@ -35,11 +35,6 @@ func (s *Station) Draw(win *pixelgl.Window, worldToScreen pixel.Matrix) {
 // DrawLayer implements ent.Entity.
 func (s *Station) DrawLayer() int {
 	return 1
-}
-
-// Tags implements ent.Entity.
-func (s *Station) Tags() []string {
-	return []string{"station"}
 }
 
 // Update implements ent.Entity.

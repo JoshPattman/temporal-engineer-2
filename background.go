@@ -60,7 +60,7 @@ func drawLevel(s *pixel.Sprite, b *pixel.Batch, scale float64, win *pixelgl.Wind
 }
 
 // Draw implements ent.Entity.
-func (b *Background) Draw(win *pixelgl.Window, worldToScreen pixel.Matrix) {
+func (b *Background) Draw(win *pixelgl.Window, _ *ent.World, worldToScreen pixel.Matrix) {
 	drawLevel(b.l1, b.b1, 0.9, win, worldToScreen)
 	drawLevel(b.l2, b.b2, 0.75, win, worldToScreen)
 	drawLevel(b.l3, b.b3, 0.5, win, worldToScreen)

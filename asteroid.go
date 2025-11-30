@@ -12,34 +12,46 @@ import (
 var _ ent.ActivePhysicsBody = &Asteroid{}
 var _ ent.Entity = &Asteroid{}
 
-func NewAsteroid(world *ent.World) *Asteroid {
-	batch, ok := ent.First(
-		ent.OfType[*BatchDraw](
-			world.ForTag("asteroid_batch"),
-		),
-	)
-	if !ok {
-		panic("cannot add asteroid without an asteroid batch present")
+type AsteroidType uint8
+
+const (
+	NormalAsteroid AsteroidType = iota
+	MineableAsteroid
+)
+
+func NewAsteroid(world *ent.World, typ AsteroidType) *Asteroid {
+	var batchName, tagName string
+	var sprite *pixel.Sprite
+	switch typ {
+	case NormalAsteroid:
+		batchName = "asteroid_batch"
+		tagName = "asteroid"
+		sprite = GlobalSpriteManager.FullSprite("asteroid.png")
+	case MineableAsteroid:
+		batchName = "mineable_asteroid_batch"
+		tagName = "mineable_asteroid"
+		sprite = GlobalSpriteManager.FullSprite("asteroid-mineable.png")
 	}
-	sprite := GlobalSpriteManager.FullSprite("asteroid.png")
 	return &Asteroid{
 		Transform: Transform{
 			pos: pixel.V(rand.Float64()*100, rand.Float64()*100),
 		},
-		sprite:   sprite,
-		velocity: pixel.V(0.5, 0).Rotated(rand.Float64() * math.Pi * 2),
-		radius:   rand.Float64()*1.5 + 0.5,
-		batch:    batch.Batch,
+		sprite:    sprite,
+		velocity:  pixel.V(0.5, 0).Rotated(rand.Float64() * math.Pi * 2),
+		radius:    rand.Float64()*1.5 + 0.5,
+		batchName: batchName,
+		tagName:   tagName,
 	}
 }
 
 type Asteroid struct {
 	ent.EntityBase
 	Transform
-	batch    *pixel.Batch
-	sprite   *pixel.Sprite
-	velocity pixel.Vec
-	radius   float64
+	batchName string
+	tagName   string
+	sprite    *pixel.Sprite
+	velocity  pixel.Vec
+	radius    float64
 }
 
 // Elasticity implements ent.ActivePhysicsBody.
@@ -85,8 +97,8 @@ func (a *Asteroid) Radius() float64 {
 	return a.radius
 }
 
-func (a *Asteroid) Tags() []string {
-	return []string{"asteroid"}
+func (a *Asteroid) AfterAdd(w *ent.World) {
+	w.AddTags(a, a.tagName)
 }
 
 func (a *Asteroid) Update(win *pixelgl.Window, entities *ent.World, dt float64) ([]ent.Entity, []ent.Entity) {
@@ -110,9 +122,17 @@ func (a *Asteroid) Update(win *pixelgl.Window, entities *ent.World, dt float64) 
 	return nil, nil
 }
 
-func (a *Asteroid) Draw(win *pixelgl.Window, worldToScreen pixel.Matrix) {
+func (a *Asteroid) Draw(win *pixelgl.Window, world *ent.World, worldToScreen pixel.Matrix) {
+	batch, ok := ent.First(
+		ent.OfType[*BatchDraw](
+			world.ForTag(a.batchName),
+		),
+	)
+	if !ok {
+		return
+	}
 	a.sprite.Draw(
-		a.batch,
+		batch.Batch,
 		pixel.IM.Scaled(
 			pixel.ZV,
 			a.radius*2.0/a.sprite.Frame().W(),
@@ -122,37 +142,6 @@ func (a *Asteroid) Draw(win *pixelgl.Window, worldToScreen pixel.Matrix) {
 			worldToScreen,
 		),
 	)
-}
-
-func NewMineableAsteroid(world *ent.World) *MineableAsteroid {
-	batch, ok := ent.First(
-		ent.OfType[*BatchDraw](
-			world.ForTag("mineable_asteroid_batch"),
-		),
-	)
-	if !ok {
-		panic("cannot add asteroid without an asteroid batch present")
-	}
-	sprite := GlobalSpriteManager.FullSprite("asteroid-mineable.png")
-	return &MineableAsteroid{
-		Asteroid: Asteroid{
-			Transform: Transform{
-				pos: pixel.V(rand.Float64()*100, rand.Float64()*100),
-			},
-			sprite:   sprite,
-			velocity: pixel.V(0.5, 0).Rotated(rand.Float64() * math.Pi * 2),
-			radius:   rand.Float64()*1.5 + 0.5,
-			batch:    batch.Batch,
-		},
-	}
-}
-
-type MineableAsteroid struct {
-	Asteroid
-}
-
-func (a *MineableAsteroid) Tags() []string {
-	return []string{"mineable_asteroid"}
 }
 
 var _ ent.Entity = &AsteroidSpawner{}
@@ -182,9 +171,9 @@ func (a *AsteroidSpawner) Update(win *pixelgl.Window, world *ent.World, dt float
 		var asteroid ent.ActivePhysicsBody
 
 		if rand.Float64() > 0.2 {
-			asteroid = NewAsteroid(world)
+			asteroid = NewAsteroid(world, NormalAsteroid)
 		} else {
-			asteroid = NewMineableAsteroid(world)
+			asteroid = NewAsteroid(world, MineableAsteroid)
 		}
 		state := asteroid.State()
 		state.Velocity = pixel.V(3+rand.Float64()*7, 0).Rotated(rand.Float64() * math.Pi * 2)
