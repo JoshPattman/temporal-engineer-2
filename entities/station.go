@@ -7,8 +7,6 @@ import (
 	"github.com/gopxl/pixel/pixelgl"
 )
 
-var _ ent.Entity = &Station{}
-
 func NewStation() *Station {
 	sprites := GlobalSpriteManager.TiledSprites("station.png", 32, []TilePos{
 		{0, 0},

@@ -16,9 +16,6 @@ import (
 //go:embed upheavtt.ttf
 var mainFont []byte
 
-var _ ent.Entity = &statsIndicator{}
-var _ ent.Drawer = &statsIndicator{}
-
 func NewSheildsIndicator() *statsIndicator {
 	return NewStatsIndicator("bubble.png", 150, func(w *ent.World) int {
 		player, ok := ent.First(

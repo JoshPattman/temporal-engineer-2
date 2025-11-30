@@ -9,17 +9,7 @@ import (
 	"github.com/gopxl/pixel/pixelgl"
 )
 
-var _ ent.ActivePhysicsBody = &Asteroid{}
-var _ ent.Entity = &Asteroid{}
-
-type AsteroidType uint8
-
-const (
-	NormalAsteroid AsteroidType = iota
-	MineableAsteroid
-)
-
-func NewAsteroid(world *ent.World, typ AsteroidType) *Asteroid {
+func NewAsteroid(typ AsteroidType) *Asteroid {
 	var batchName, tagName string
 	var sprite *pixel.Sprite
 	var resources int
@@ -47,6 +37,13 @@ func NewAsteroid(world *ent.World, typ AsteroidType) *Asteroid {
 	ast.SetPosition(pixel.V(rand.Float64()*100, rand.Float64()*100))
 	return ast
 }
+
+type AsteroidType uint8
+
+const (
+	NormalAsteroid AsteroidType = iota
+	MineableAsteroid
+)
 
 type Asteroid struct {
 	ent.CoreEntity
@@ -113,45 +110,4 @@ func (a *Asteroid) Draw(win *pixelgl.Window, world *ent.World, worldToScreen pix
 			worldToScreen,
 		),
 	)
-}
-
-var _ ent.Entity = &AsteroidSpawner{}
-
-func NewAsteroidSpawner() *AsteroidSpawner {
-	return &AsteroidSpawner{}
-}
-
-type AsteroidSpawner struct {
-	ent.CoreEntity
-	ent.WithUpdate
-	timer float64
-}
-
-// Update implements ent.Entity.
-func (a *AsteroidSpawner) Update(win *pixelgl.Window, world *ent.World, dt float64) (toCreate []ent.Entity, toDestroy []ent.Entity) {
-	player, ok := ent.First(
-		ent.OfType[*Player](
-			world.ForTag("player"),
-		),
-	)
-	if !ok {
-		return nil, nil
-	}
-	a.timer += dt
-	if a.timer > 0.2 {
-		a.timer = 0
-		var asteroid ent.ActivePhysicsBody
-
-		if rand.Float64() > 0.2 {
-			asteroid = NewAsteroid(world, NormalAsteroid)
-		} else {
-			asteroid = NewAsteroid(world, MineableAsteroid)
-		}
-		asteroid.SetVelocity(pixel.V(3+rand.Float64()*7, 0).Rotated(rand.Float64() * math.Pi * 2))
-		asteroid.SetPosition(player.Position().Add(pixel.V(35, 0).Rotated(rand.Float64() * math.Pi * 2)))
-		return []ent.Entity{
-			asteroid.(ent.Entity),
-		}, nil
-	}
-	return nil, nil
 }

@@ -7,8 +7,6 @@ import (
 	"github.com/gopxl/pixel/pixelgl"
 )
 
-var _ ent.Entity = &Camera{}
-
 func NewCamera() *Camera {
 	return &Camera{}
 }

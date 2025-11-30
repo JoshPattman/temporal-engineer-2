@@ -7,8 +7,6 @@ import (
 	"github.com/gopxl/pixel/pixelgl"
 )
 
-var _ ent.Entity = &BatchDraw{}
-
 func NewBatchDraw(spritePath string, tag string) *BatchDraw {
 	return &BatchDraw{
 		Batch: pixel.NewBatch(

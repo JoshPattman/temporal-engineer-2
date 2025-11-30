@@ -8,8 +8,6 @@ import (
 	"github.com/gopxl/pixel/pixelgl"
 )
 
-var _ ent.Entity = &Background{}
-
 func NewBackground() *Background {
 	s1 := GlobalSpriteManager.FullSprite("background001.png")
 	s2 := GlobalSpriteManager.FullSprite("background002.png")

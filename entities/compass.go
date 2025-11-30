@@ -8,8 +8,6 @@ import (
 	"github.com/gopxl/pixel/pixelgl"
 )
 
-var _ ent.Entity = &Compass{}
-
 func NewCompass() *Compass {
 	sprite := GlobalSpriteManager.FullSprite("compass.png")
 	return &Compass{

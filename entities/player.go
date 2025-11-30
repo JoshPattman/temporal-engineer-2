@@ -23,8 +23,6 @@ func NewPlayer() *Player {
 	}
 }
 
-var _ ent.ActivePhysicsBody = &Player{}
-
 type Player struct {
 	ent.CoreEntity
 	ent.WithDraw
