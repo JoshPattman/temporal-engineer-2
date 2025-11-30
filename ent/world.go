@@ -10,11 +10,11 @@ import (
 
 // A collection of entities that can be indexed and updated in various ways.
 type World struct {
-	allEntities     *OrderedIndex[Entity]
-	orderedByDraw   *OrderedIndex[Drawer]
-	orderedByUpdate *OrderedIndex[Updater]
-	physicsBodies   *OrderedIndex[PhysicsBody]
-	byTags          map[string][]Entity
+	allEntities     *Index[Entity]
+	orderedByDraw   *Index[Drawer]
+	orderedByUpdate *Index[Updater]
+	physicsBodies   *Index[PhysicsBody]
+	byTags          map[string]*Index[Entity]
 }
 
 // Create a new, empty, world.
@@ -24,7 +24,7 @@ func NewWorld() *World {
 		orderedByDraw:   NewOrderedIndex(func(d Drawer) int { return d.DrawLayer() }),
 		orderedByUpdate: NewOrderedIndex(func(u Updater) int { return u.UpdateLayer() }),
 		physicsBodies:   NewUnorderedIndex[PhysicsBody](),
-		byTags:          make(map[string][]Entity, 0),
+		byTags:          make(map[string]*Index[Entity], 0),
 	}
 }
 
@@ -59,13 +59,9 @@ func (es *World) Remove(toRemove ...Entity) {
 		es.orderedByDraw.RemoveUntyped(e)
 		es.orderedByUpdate.RemoveUntyped(e)
 		es.physicsBodies.RemoveUntyped(e)
-		for tag, entities := range es.byTags {
-			idx := slices.Index(entities, e)
-			if idx != -1 {
-				es.byTags[tag] = slices.Delete(es.byTags[tag], idx, idx+1)
-				if len(es.byTags[tag]) == 0 {
-					delete(es.byTags, tag)
-				}
+		for tag, index := range es.byTags {
+			if index.Remove(e) && es.byTags[tag].Len() == 0 {
+				delete(es.byTags, tag)
 			}
 		}
 		ClearUUID(e)
@@ -74,18 +70,13 @@ func (es *World) Remove(toRemove ...Entity) {
 
 // Does the world contain this entity already?
 func (es *World) Has(e Entity) bool {
-	for e2 := range es.allEntities.All() {
-		if e == e2 {
-			return true
-		}
-	}
-	return false
+	return es.allEntities.Has(e)
 }
 
 // Get all the entities for the given tag.
 func (es *World) ForTag(tag string) iter.Seq[Entity] {
 	if forTag, ok := es.byTags[tag]; ok {
-		return slices.Values(forTag)
+		return forTag.All()
 	} else {
 		return func(yield func(Entity) bool) {}
 	}
@@ -95,23 +86,21 @@ func (es *World) ForTag(tag string) iter.Seq[Entity] {
 func (es *World) AddTags(e Entity, tags ...string) {
 	for _, tag := range tags {
 		if _, ok := es.byTags[tag]; !ok {
-			es.byTags[tag] = make([]Entity, 0)
+			es.byTags[tag] = NewUnorderedIndex[Entity]()
 		}
-		if !slices.Contains(es.byTags[tag], e) {
-			es.byTags[tag] = append(es.byTags[tag], e)
-		}
+		es.byTags[tag].Add(e)
 	}
 }
 
 // Remove the tags from the specific object.
 func (es *World) RemoveTags(e Entity, tags ...string) {
 	for _, tag := range tags {
-		idx := slices.Index(es.byTags[tag], e)
-		if idx != -1 {
-			es.byTags[tag] = slices.Delete(es.byTags[tag], idx, idx+1)
-			if len(es.byTags[tag]) == 0 {
-				delete(es.byTags, tag)
-			}
+		index, ok := es.byTags[tag]
+		if !ok {
+			continue
+		}
+		if index.Remove(e) && es.byTags[tag].Len() == 0 {
+			delete(es.byTags, tag)
 		}
 	}
 }

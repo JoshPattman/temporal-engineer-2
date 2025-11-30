@@ -46,7 +46,7 @@ func Closest[T Positioner](pos pixel.Vec, xs iter.Seq[T]) (T, bool) {
 	var c T
 	d := math.Inf(1)
 	for item := range xs {
-		dist := item.Position().To(pos).Len()
+		dist := item.Position().To(pos).SqLen()
 		if dist < d {
 			d = dist
 			c = item

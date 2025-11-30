@@ -6,15 +6,15 @@ import (
 	"sort"
 )
 
-func NewOrderedIndex[T UUIDer](orderFunc func(T) int) *OrderedIndex[T] {
-	return &OrderedIndex[T]{
+func NewOrderedIndex[T UUIDer](orderFunc func(T) int) *Index[T] {
+	return &Index[T]{
 		orderedItems:  make([]orderedItem[T], 0),
 		containsUUIDs: make(map[string]struct{}),
 		orderOf:       orderFunc,
 	}
 }
 
-func NewUnorderedIndex[T UUIDer]() *OrderedIndex[T] {
+func NewUnorderedIndex[T UUIDer]() *Index[T] {
 	return NewOrderedIndex(func(t T) int { return 0 })
 }
 
@@ -23,13 +23,13 @@ type orderedItem[T any] struct {
 	order int
 }
 
-type OrderedIndex[T UUIDer] struct {
+type Index[T UUIDer] struct {
 	orderedItems  []orderedItem[T]
 	containsUUIDs map[string]struct{}
 	orderOf       func(T) int
 }
 
-func (oi *OrderedIndex[T]) AddUntyped(item any) bool {
+func (oi *Index[T]) AddUntyped(item any) bool {
 	itemTyped, ok := item.(T)
 	if !ok {
 		return false
@@ -37,7 +37,7 @@ func (oi *OrderedIndex[T]) AddUntyped(item any) bool {
 	return oi.Add(itemTyped)
 }
 
-func (oi *OrderedIndex[T]) RemoveUntyped(item any) bool {
+func (oi *Index[T]) RemoveUntyped(item any) bool {
 	itemTyped, ok := item.(T)
 	if !ok {
 		return false
@@ -45,7 +45,15 @@ func (oi *OrderedIndex[T]) RemoveUntyped(item any) bool {
 	return oi.Remove(itemTyped)
 }
 
-func (oi *OrderedIndex[T]) Add(item T) bool {
+func (oi *Index[T]) HasUntyped(item any) bool {
+	itemTyped, ok := item.(T)
+	if !ok {
+		return false
+	}
+	return oi.Has(itemTyped)
+}
+
+func (oi *Index[T]) Add(item T) bool {
 	id := item.UUID()
 	if _, ok := oi.containsUUIDs[id]; ok {
 		return false
@@ -66,7 +74,7 @@ func (oi *OrderedIndex[T]) Add(item T) bool {
 	return true
 }
 
-func (oi *OrderedIndex[T]) Remove(item T) bool {
+func (oi *Index[T]) Remove(item T) bool {
 	id := item.UUID()
 	if _, ok := oi.containsUUIDs[id]; !ok {
 		return false
@@ -93,7 +101,7 @@ func (oi *OrderedIndex[T]) Remove(item T) bool {
 	panic("somthing has gone wrong with maintaining the index")
 }
 
-func (index *OrderedIndex[T]) All() iter.Seq[T] {
+func (index *Index[T]) All() iter.Seq[T] {
 	return func(yield func(T) bool) {
 		for _, item := range index.orderedItems {
 			if !yield(item.item) {
@@ -101,4 +109,13 @@ func (index *OrderedIndex[T]) All() iter.Seq[T] {
 			}
 		}
 	}
+}
+
+func (index *Index[T]) Has(item T) bool {
+	_, ok := index.containsUUIDs[item.UUID()]
+	return ok
+}
+
+func (index Index[T]) Len() int {
+	return len(index.orderedItems)
 }
