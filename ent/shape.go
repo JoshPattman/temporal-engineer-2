@@ -9,12 +9,17 @@ import (
 // A sum type of different shapes supported by the physics engine.
 type Shape interface {
 	shape()
+	EffectArea() (pixel.Vec, float64)
 }
 
 // A circle shape.
 type Circle struct {
 	Center pixel.Vec
 	Radius float64
+}
+
+func (c Circle) EffectArea() (pixel.Vec, float64) {
+	return c.Center, c.Radius
 }
 
 func (Circle) shape() {}
@@ -28,6 +33,15 @@ type shapeCollision struct {
 
 // Compute the collision of two shapes of any type.
 func collideShapes(a, b Shape) shapeCollision {
+	// Quick culling check before typecasting
+	// Are the shapes too far apart?
+	p1, r1 := a.EffectArea()
+	p2, r2 := b.EffectArea()
+	dist2 := p1.To(p2).SqLen()
+	if dist2 > math.Pow(r1+r2, 2) {
+		return shapeCollision{}
+	}
+	// Collide shapes based on type
 	var col shapeCollision
 	var ok bool
 	col, ok = checkAndCollide(a, b, collideCircleCircle)
