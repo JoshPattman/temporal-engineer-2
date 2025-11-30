@@ -45,6 +45,8 @@ type Player struct {
 	mining           bool
 	lastInvertTimer  float64
 	invert           bool
+	minerals         int
+	miningTimer      float64
 }
 
 // Elasticity implements ent.ActivePhysicsBody.
@@ -101,7 +103,7 @@ func (p *Player) Update(win *pixelgl.Window, entities *ent.World, dt float64) ([
 	// Deal with dead player
 	if p.dead {
 		return []ent.Entity{
-				NewExplosion(p.pos),
+				NewExplosion(p.pos, 1),
 				NewPlayer(),
 			}, []ent.Entity{
 				p,
@@ -117,6 +119,7 @@ func (p *Player) Update(win *pixelgl.Window, entities *ent.World, dt float64) ([
 			}
 		}
 		p.mining = true
+		p.miningTimer = 0
 	} else if win.JustReleased(pixelgl.KeySpace) {
 		asteroid, ok := p.getTargetAsteroid(entities)
 		if ok {
@@ -126,6 +129,8 @@ func (p *Player) Update(win *pixelgl.Window, entities *ent.World, dt float64) ([
 	}
 
 	// Handle mining
+	var destroyAsteroids []ent.Entity
+	var addExplosions []ent.Entity
 	if p.mining {
 		asteroid, ok := p.getTargetAsteroid(entities)
 		if !ok {
@@ -135,6 +140,19 @@ func (p *Player) Update(win *pixelgl.Window, entities *ent.World, dt float64) ([
 			entities.RemoveTags(asteroid, "player_target")
 		} else {
 			p.miningPos = asteroid.Position()
+		}
+		p.miningTimer += dt
+		if p.miningTimer > 1 {
+			p.miningTimer = 0
+			p.minerals++
+			asteroid.resources--
+			if asteroid.resources <= 0 {
+				destroyAsteroids = append(destroyAsteroids, asteroid)
+				addExplosions = append(addExplosions, NewExplosion(asteroid.pos, asteroid.Radius()))
+			} else {
+				edgePos := asteroid.pos.To(p.pos).Unit().Scaled(asteroid.radius).Add(asteroid.pos)
+				addExplosions = append(addExplosions, NewExplosion(edgePos, 0.3))
+			}
 		}
 	}
 
@@ -156,7 +174,7 @@ func (p *Player) Update(win *pixelgl.Window, entities *ent.World, dt float64) ([
 	// Handle timers
 	p.lastDamageTimer += dt
 	p.bubbleTimer -= dt
-	return nil, nil
+	return addExplosions, destroyAsteroids
 }
 
 func (p *Player) getTargetAsteroid(entities *ent.World) (*Asteroid, bool) {
@@ -226,7 +244,11 @@ func (p *Player) Shields() int {
 	return p.sheilds
 }
 
-func NewExplosion(at pixel.Vec) *Explosion {
+func (p *Player) Minerals() int {
+	return p.minerals
+}
+
+func NewExplosion(at pixel.Vec, scale float64) *Explosion {
 	sprites := GlobalSpriteManager.TiledSprites(
 		"boom.png",
 		36,
@@ -247,6 +269,7 @@ func NewExplosion(at pixel.Vec) *Explosion {
 		pos:     at,
 		timer:   0,
 		sprites: sprites,
+		scale:   scale,
 	}
 }
 
@@ -257,6 +280,7 @@ type Explosion struct {
 	pos     pixel.Vec
 	timer   float64
 	sprites []*pixel.Sprite
+	scale   float64
 }
 
 // Draw implements ent.Entity.
@@ -265,9 +289,11 @@ func (e *Explosion) Draw(win *pixelgl.Window, _ *ent.World, worldToScreen pixel.
 	s := e.sprites[idx]
 	s.Draw(
 		win,
-		pixel.IM.Scaled(pixel.ZV, 0.1).Moved(e.pos).Chained(worldToScreen),
+		pixel.IM.Scaled(pixel.ZV, 0.1*e.scale).Moved(e.pos).Chained(worldToScreen),
 	)
 }
+
+func (e *Explosion) DrawLayer() int { return -1 }
 
 // Update implements ent.Entity.
 func (e *Explosion) Update(win *pixelgl.Window, all *ent.World, dt float64) (toCreate []ent.Entity, toDestroy []ent.Entity) {

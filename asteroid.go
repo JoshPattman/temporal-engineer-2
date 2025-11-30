@@ -22,15 +22,19 @@ const (
 func NewAsteroid(world *ent.World, typ AsteroidType) *Asteroid {
 	var batchName, tagName string
 	var sprite *pixel.Sprite
+	var resources int
+	radius := rand.Float64()*1.5 + 0.5
 	switch typ {
 	case NormalAsteroid:
 		batchName = "asteroid_batch"
 		tagName = "asteroid"
 		sprite = GlobalSpriteManager.FullSprite("asteroid.png")
+		resources = 0
 	case MineableAsteroid:
 		batchName = "mineable_asteroid_batch"
 		tagName = "mineable_asteroid"
 		sprite = GlobalSpriteManager.FullSprite("asteroid-mineable.png")
+		resources = int(radius * 3)
 	}
 	return &Asteroid{
 		Transform: Transform{
@@ -38,9 +42,10 @@ func NewAsteroid(world *ent.World, typ AsteroidType) *Asteroid {
 		},
 		sprite:    sprite,
 		velocity:  pixel.V(0.5, 0).Rotated(rand.Float64() * math.Pi * 2),
-		radius:    rand.Float64()*1.5 + 0.5,
+		radius:    radius,
 		batchName: batchName,
 		tagName:   tagName,
+		resources: resources,
 	}
 }
 
@@ -52,6 +57,7 @@ type Asteroid struct {
 	sprite    *pixel.Sprite
 	velocity  pixel.Vec
 	radius    float64
+	resources int
 }
 
 // Elasticity implements ent.ActivePhysicsBody.

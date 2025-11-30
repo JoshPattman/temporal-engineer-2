@@ -38,7 +38,7 @@ func NewMineralsIndicator() *statsIndicator {
 		if !ok {
 			return 0
 		}
-		return player.Shields()
+		return player.Minerals()
 	})
 }
 
