@@ -36,10 +36,7 @@ func NewAsteroid(world *ent.World, typ AsteroidType) *Asteroid {
 		sprite = GlobalSpriteManager.FullSprite("asteroid-mineable.png")
 		resources = int(radius * 3)
 	}
-	return &Asteroid{
-		Transform: Transform{
-			pos: pixel.V(rand.Float64()*100, rand.Float64()*100),
-		},
+	ast := &Asteroid{
 		sprite:    sprite,
 		velocity:  pixel.V(0.5, 0).Rotated(rand.Float64() * math.Pi * 2),
 		radius:    radius,
@@ -47,11 +44,15 @@ func NewAsteroid(world *ent.World, typ AsteroidType) *Asteroid {
 		tagName:   tagName,
 		resources: resources,
 	}
+	ast.SetState(ast.State().WithPosition(pixel.V(rand.Float64()*100, rand.Float64()*100)))
+	return ast
 }
 
 type Asteroid struct {
-	ent.EntityBase
-	Transform
+	ent.MinimalEntity
+	ent.MinimalActivePhysicsBody
+	ent.MinimalUpdater
+	ent.MinimalDraw
 	batchName string
 	tagName   string
 	sprite    *pixel.Sprite
@@ -60,42 +61,11 @@ type Asteroid struct {
 	resources int
 }
 
-// Elasticity implements ent.ActivePhysicsBody.
-func (a *Asteroid) Elasticity() float64 {
-	return 0.3
-}
-
-// IsPhysicsActive implements ent.ActivePhysicsBody.
-func (a *Asteroid) IsPhysicsActive() bool {
-	return true
-}
-
-// Mass implements ent.ActivePhysicsBody.
-func (a *Asteroid) Mass() float64 {
-	return 1
-}
-
-// SetState implements ent.ActivePhysicsBody.
-func (a *Asteroid) SetState(state ent.BodyState) {
-	a.pos = state.Position
-	a.velocity = state.Velocity
-	a.rot = state.Angle
-}
-
 // Shape implements ent.ActivePhysicsBody.
 func (a *Asteroid) Shape() ent.Shape {
 	return ent.Circle{
-		Center: a.pos,
+		Center: a.State().Position,
 		Radius: a.radius,
-	}
-}
-
-// State implements ent.ActivePhysicsBody.
-func (a *Asteroid) State() ent.BodyState {
-	return ent.BodyState{
-		Position: a.pos,
-		Velocity: a.velocity,
-		Angle:    a.rot,
 	}
 }
 
@@ -115,16 +85,11 @@ func (a *Asteroid) Update(win *pixelgl.Window, entities *ent.World, dt float64) 
 		),
 	)
 	if ok {
-		dist := player.Position().To(a.Position()).Len()
+		dist := player.Position().To(a.State().Position).Len()
 		if dist > 40 {
 			return nil, []ent.Entity{a}
 		}
 	}
-
-	// Physics
-	fx := ent.BodyEffects{}
-	//fx.Force = ent.CalculateDragForce(a.velocity, 0.5, 0)
-	ent.EulerStateUpdate(a, fx, dt)
 	return nil, nil
 }
 
@@ -143,7 +108,7 @@ func (a *Asteroid) Draw(win *pixelgl.Window, world *ent.World, worldToScreen pix
 			pixel.ZV,
 			a.radius*2.0/a.sprite.Frame().W(),
 		).Chained(
-			a.Mat(),
+			ent.PhysicsBodyMat(a),
 		).Chained(
 			worldToScreen,
 		),
@@ -157,7 +122,8 @@ func NewAsteroidSpawner() *AsteroidSpawner {
 }
 
 type AsteroidSpawner struct {
-	ent.EntityBase
+	ent.MinimalEntity
+	ent.MinimalUpdater
 	timer float64
 }
 

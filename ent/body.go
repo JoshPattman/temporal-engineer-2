@@ -25,6 +25,15 @@ func (bs BodyState) VelocityAt(pt pixel.Vec) pixel.Vec {
 	return bs.Velocity.Add(dir.Rotated(math.Pi / 2).Scaled(bs.AngularVelocity * distPerRad))
 }
 
+func (bs BodyState) WithPosition(pos pixel.Vec) BodyState {
+	return BodyState{
+		Position:        pos,
+		Velocity:        bs.Velocity,
+		Angle:           bs.Angle,
+		AngularVelocity: bs.AngularVelocity,
+	}
+}
+
 // A body that has physics and the ability to affect other bodies in the world.
 type PhysicsBody interface {
 	UUIDer
@@ -39,6 +48,7 @@ type ActivePhysicsBody interface {
 	SetState(BodyState)
 	Mass() float64
 	IsPhysicsActive() bool
+	PysicsUpdate(dt float64)
 }
 
 // Calculate the force of drag by summing the natural and linear drag forces, scaled by their multipliers.
@@ -69,8 +79,14 @@ type BodyEffects struct {
 	Torque  float64
 }
 
+type EulerUpdateable interface {
+	State() BodyState
+	SetState(BodyState)
+	Mass() float64
+}
+
 // Update an active physics body using euler rules with some effects and a time interval.
-func EulerStateUpdate(body ActivePhysicsBody, effects BodyEffects, dt float64) {
+func EulerStateUpdate(body EulerUpdateable, effects BodyEffects, dt float64) {
 	state := body.State()
 	acceleration := effects.Force.Scaled(1.0 / body.Mass())
 	state.Velocity = state.Velocity.Add(acceleration.Scaled(dt).Add(effects.Impulse))
@@ -79,4 +95,12 @@ func EulerStateUpdate(body ActivePhysicsBody, effects BodyEffects, dt float64) {
 	state.AngularVelocity += angularAcceleration * dt
 	state.Angle += state.AngularVelocity * dt
 	body.SetState(state)
+}
+
+func PhysicsBodyMat(body PhysicsBody) pixel.Matrix {
+	return pixel.IM.Rotated(
+		pixel.ZV, body.State().Angle,
+	).Moved(
+		body.State().Position,
+	)
 }

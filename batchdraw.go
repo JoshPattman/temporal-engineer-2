@@ -20,7 +20,8 @@ func NewBatchDraw(spritePath string, tag string) *BatchDraw {
 }
 
 type BatchDraw struct {
-	ent.EntityBase
+	ent.MinimalEntity
+	ent.MinimalDraw
 	Batch *pixel.Batch
 	tag   string
 }

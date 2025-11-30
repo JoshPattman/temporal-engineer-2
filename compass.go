@@ -18,7 +18,9 @@ func NewCompass() *Compass {
 }
 
 type Compass struct {
-	ent.EntityBase
+	ent.MinimalEntity
+	ent.MinimalDraw
+	ent.MinimalUpdater
 	sprite *pixel.Sprite
 	angle  float64
 }

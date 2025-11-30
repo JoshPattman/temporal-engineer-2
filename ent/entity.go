@@ -42,27 +42,6 @@ type Entity interface {
 	AfterAdd(*World)
 }
 
-// You may optionally inherit this to give an entity some default behaviour.
-type EntityBase struct {
-	uuid string
-}
-
-func (e *EntityBase) UUID() string {
-	return e.uuid
-}
-func (e *EntityBase) SetUUID(id string) {
-	e.uuid = id
-}
-
-func (*EntityBase) Update(win *pixelgl.Window, world *World, dt float64) (toCreate, toDestroy []Entity) {
-	return nil, nil
-}
-func (*EntityBase) PreDraw(win *pixelgl.Window)                                        {}
-func (*EntityBase) Draw(win *pixelgl.Window, world *World, worldToScreen pixel.Matrix) {}
-func (*EntityBase) UpdateLayer() int                                                   { return 0 }
-func (*EntityBase) DrawLayer() int                                                     { return 0 }
-func (*EntityBase) AfterAdd(*World)                                                    {}
-
 func SetRandomUUID(e Entity) {
 	e.SetUUID(uuid.NewString())
 }

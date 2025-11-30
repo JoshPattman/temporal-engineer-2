@@ -129,6 +129,12 @@ func (es *World) Update(win *pixelgl.Window, dt float64) {
 	}
 
 	fizBodies := slices.Collect(es.physicsBodies.All())
+	for _, body := range fizBodies {
+		body, ok := body.(ActivePhysicsBody)
+		if ok && body.IsPhysicsActive() {
+			body.PysicsUpdate(dt)
+		}
+	}
 	cols := StatelessCollisionPhysics(fizBodies)
 
 	for _, col := range cols {

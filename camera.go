@@ -14,7 +14,8 @@ func NewCamera() *Camera {
 }
 
 type Camera struct {
-	ent.EntityBase
+	ent.MinimalEntity
+	ent.MinimalUpdater
 	pos pixel.Vec
 }
 

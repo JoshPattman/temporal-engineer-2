@@ -25,7 +25,8 @@ func NewBackground() *Background {
 }
 
 type Background struct {
-	ent.EntityBase
+	ent.MinimalEntity
+	ent.MinimalDraw
 	l1 *pixel.Sprite
 	l2 *pixel.Sprite
 	l3 *pixel.Sprite

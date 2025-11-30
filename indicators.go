@@ -55,7 +55,9 @@ func NewStatsIndicator(spriteName string, vPos float64, get func(*ent.World) int
 }
 
 type statsIndicator struct {
-	ent.EntityBase
+	ent.MinimalEntity
+	ent.MinimalDraw
+	ent.MinimalUpdater
 	sprite *pixel.Sprite
 	value  int
 	text   *text.Text
