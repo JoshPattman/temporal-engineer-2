@@ -1,0 +1,104 @@
+package ent
+
+import (
+	"iter"
+	"slices"
+	"sort"
+)
+
+func NewOrderedIndex[T UUIDer](orderFunc func(T) int) *OrderedIndex[T] {
+	return &OrderedIndex[T]{
+		orderedItems:  make([]orderedItem[T], 0),
+		containsUUIDs: make(map[string]struct{}),
+		orderOf:       orderFunc,
+	}
+}
+
+func NewUnorderedIndex[T UUIDer]() *OrderedIndex[T] {
+	return NewOrderedIndex(func(t T) int { return 0 })
+}
+
+type orderedItem[T any] struct {
+	item  T
+	order int
+}
+
+type OrderedIndex[T UUIDer] struct {
+	orderedItems  []orderedItem[T]
+	containsUUIDs map[string]struct{}
+	orderOf       func(T) int
+}
+
+func (oi *OrderedIndex[T]) AddUntyped(item any) bool {
+	itemTyped, ok := item.(T)
+	if !ok {
+		return false
+	}
+	return oi.Add(itemTyped)
+}
+
+func (oi *OrderedIndex[T]) RemoveUntyped(item any) bool {
+	itemTyped, ok := item.(T)
+	if !ok {
+		return false
+	}
+	return oi.Remove(itemTyped)
+}
+
+func (oi *OrderedIndex[T]) Add(item T) bool {
+	id := item.UUID()
+	if _, ok := oi.containsUUIDs[id]; ok {
+		return false
+	}
+	oi.containsUUIDs[id] = struct{}{}
+	order := oi.orderOf(item)
+	insertIndex := sort.Search(
+		len(oi.orderedItems),
+		func(i int) bool {
+			return order > oi.orderedItems[i].order
+		},
+	)
+	oi.orderedItems = slices.Insert(
+		oi.orderedItems,
+		insertIndex,
+		orderedItem[T]{item, order},
+	)
+	return true
+}
+
+func (oi *OrderedIndex[T]) Remove(item T) bool {
+	id := item.UUID()
+	if _, ok := oi.containsUUIDs[id]; !ok {
+		return false
+	}
+	delete(oi.containsUUIDs, id)
+	order := oi.orderOf(item)
+	// We should only start the search from the position where the orders start to equal (can skip all orders below that)
+	startSearchIndex := sort.Search(
+		len(oi.orderedItems),
+		func(i int) bool {
+			return order >= oi.orderedItems[i].order
+		},
+	)
+	for i := startSearchIndex; i < len(oi.orderedItems); i++ {
+		checkItem := oi.orderedItems[i]
+		if checkItem.item.UUID() == id {
+			oi.orderedItems = slices.Delete(
+				oi.orderedItems,
+				i, i+1,
+			)
+			return true
+		}
+	}
+	panic("somthing has gone wrong with maintaining the index")
+}
+
+func (index *OrderedIndex[T]) All() iter.Seq[T] {
+	return func(yield func(T) bool) {
+		for _, item := range index.orderedItems {
+			if !yield(item.item) {
+				return
+			}
+		}
+	}
+}

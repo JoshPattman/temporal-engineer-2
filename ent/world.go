@@ -10,20 +10,20 @@ import (
 
 // A collection of entities that can be indexed and updated in various ways.
 type World struct {
-	allEntities     *index[Entity]
-	orderedByDraw   *index[Drawer]
-	orderedByUpdate *index[Updater]
-	physicsBodies   *index[PhysicsBody]
+	allEntities     *OrderedIndex[Entity]
+	orderedByDraw   *OrderedIndex[Drawer]
+	orderedByUpdate *OrderedIndex[Updater]
+	physicsBodies   *OrderedIndex[PhysicsBody]
 	byTags          map[string][]Entity
 }
 
 // Create a new, empty, world.
 func NewWorld() *World {
 	return &World{
-		allEntities:     newUnorderedIndex[Entity](),
-		orderedByDraw:   newOrderedIndex(func(d Drawer) int { return d.DrawLayer() }),
-		orderedByUpdate: newOrderedIndex(func(u Updater) int { return u.UpdateLayer() }),
-		physicsBodies:   newUnorderedIndex[PhysicsBody](),
+		allEntities:     NewUnorderedIndex[Entity](),
+		orderedByDraw:   NewOrderedIndex(func(d Drawer) int { return d.DrawLayer() }),
+		orderedByUpdate: NewOrderedIndex(func(u Updater) int { return u.UpdateLayer() }),
+		physicsBodies:   NewUnorderedIndex[PhysicsBody](),
 		byTags:          make(map[string][]Entity, 0),
 	}
 }
@@ -33,35 +33,42 @@ func NewWorld() *World {
 // Each entity can only be added to the world once.
 func (es *World) Add(toAdd ...Entity) {
 	for _, e := range toAdd {
-		ok := es.allEntities.tryAdd(e)
-		if !ok {
+		if HasUUID(e) {
 			continue
 		}
-		es.orderedByDraw.tryAdd(e)
-		es.orderedByUpdate.tryAdd(e)
-		es.physicsBodies.tryAdd(e)
+		SetRandomUUID(e)
+		es.allEntities.Add(e)
+		es.orderedByDraw.AddUntyped(e)
+		es.orderedByUpdate.AddUntyped(e)
+		es.physicsBodies.AddUntyped(e)
 		e.AfterAdd(es)
 	}
 }
 
 // Remove the entity from the world.
 // If the entity is not there, this will be a no-op.
-func (es *World) Remove(e Entity) {
-	ok := es.allEntities.tryRemove(e)
-	if !ok {
-		return
-	}
-	es.orderedByDraw.tryRemove(e)
-	es.orderedByUpdate.tryRemove(e)
-	es.physicsBodies.tryRemove(e)
-	for tag, entities := range es.byTags {
-		idx := slices.Index(entities, e)
-		if idx != -1 {
-			es.byTags[tag] = slices.Delete(es.byTags[tag], idx, idx+1)
-			if len(es.byTags[tag]) == 0 {
-				delete(es.byTags, tag)
+func (es *World) Remove(toRemove ...Entity) {
+	for _, e := range toRemove {
+		if !HasUUID(e) {
+			continue
+		}
+		ok := es.allEntities.Remove(e)
+		if !ok {
+			continue
+		}
+		es.orderedByDraw.RemoveUntyped(e)
+		es.orderedByUpdate.RemoveUntyped(e)
+		es.physicsBodies.RemoveUntyped(e)
+		for tag, entities := range es.byTags {
+			idx := slices.Index(entities, e)
+			if idx != -1 {
+				es.byTags[tag] = slices.Delete(es.byTags[tag], idx, idx+1)
+				if len(es.byTags[tag]) == 0 {
+					delete(es.byTags, tag)
+				}
 			}
 		}
+		ClearUUID(e)
 	}
 }
 
@@ -157,59 +164,4 @@ func (es *World) Draw(win *pixelgl.Window, worldToScreen pixel.Matrix) {
 	for e := range es.orderedByDraw.All() {
 		e.Draw(win, es, worldToScreen)
 	}
-}
-
-func newOrderedIndex[T comparable](order func(T) int) *index[T] {
-	return &index[T]{
-		items: make([]T, 0),
-		layer: order,
-	}
-}
-
-func newUnorderedIndex[T comparable]() *index[T] {
-	return &index[T]{
-		items: make([]T, 0),
-		layer: func(t T) int { return 0 },
-	}
-}
-
-type index[T comparable] struct {
-	items []T
-	layer func(T) int
-}
-
-func (index *index[T]) tryAdd(item any) bool {
-	itemTyped, ok := item.(T)
-	if !ok {
-		return false
-	}
-
-	if slices.Contains(index.items, itemTyped) {
-		return false
-	}
-
-	i := 0
-	for i < len(index.items) && index.layer(itemTyped) <= index.layer(index.items[i]) {
-		i += 1
-	}
-
-	index.items = slices.Insert(index.items, i, itemTyped)
-	return true
-}
-
-func (index *index[T]) tryRemove(item any) bool {
-	itemTyped, ok := item.(T)
-	if !ok {
-		return false
-	}
-	i := slices.Index(index.items, itemTyped)
-	if i == -1 {
-		return false
-	}
-	index.items = slices.Delete(index.items, i, i+1)
-	return true
-}
-
-func (index *index[T]) All() iter.Seq[T] {
-	return slices.Values(index.items)
 }
