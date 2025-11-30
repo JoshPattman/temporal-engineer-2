@@ -1,8 +1,10 @@
-package main
+package entities
 
 import (
 	"ent"
 	"fmt"
+
+	_ "embed"
 
 	"github.com/golang/freetype/truetype"
 	"github.com/gopxl/pixel"
@@ -10,6 +12,9 @@ import (
 	"github.com/gopxl/pixel/text"
 	"golang.org/x/image/colornames"
 )
+
+//go:embed upheavtt.ttf
+var mainFont []byte
 
 var _ ent.Entity = &statsIndicator{}
 var _ ent.Drawer = &statsIndicator{}
@@ -55,9 +60,9 @@ func NewStatsIndicator(spriteName string, vPos float64, get func(*ent.World) int
 }
 
 type statsIndicator struct {
-	ent.MinimalEntity
-	ent.MinimalDraw
-	ent.MinimalUpdater
+	ent.CoreEntity
+	ent.WithDraw
+	ent.WithUpdate
 	sprite *pixel.Sprite
 	value  int
 	text   *text.Text

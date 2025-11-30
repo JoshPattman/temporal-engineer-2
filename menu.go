@@ -11,7 +11,7 @@ import (
 	"golang.org/x/image/colornames"
 )
 
-//go:embed upheavtt.ttf
+//go:embed entities/upheavtt.ttf
 var mainFont []byte
 
 func titleAtlas() *text.Atlas {

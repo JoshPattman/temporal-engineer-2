@@ -1,4 +1,4 @@
-package main
+package entities
 
 import (
 	"ent"
@@ -21,8 +21,8 @@ func NewStation() *Station {
 }
 
 type Station struct {
-	ent.MinimalEntity
-	ent.MinimalDraw
+	ent.CoreEntity
+	ent.WithDraw
 	sprites     []*pixel.Sprite
 	spriteTimer float64
 }

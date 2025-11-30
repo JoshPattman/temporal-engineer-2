@@ -1,4 +1,4 @@
-package main
+package entities
 
 import (
 	"bytes"
@@ -9,6 +9,8 @@ import (
 
 	"github.com/gopxl/pixel"
 )
+
+var GlobalSpriteManager *SpriteManager
 
 func NewSpriteManager(root string) *SpriteManager {
 	return &SpriteManager{

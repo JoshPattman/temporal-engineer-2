@@ -52,12 +52,10 @@ func checkActiveBodies(a, b ActivePhysicsBody) (Collision, bool) {
 	if !col.collided {
 		return Collision{}, false
 	}
-	aState := a.State()
-	bState := b.State()
 
 	combinedElasticity := 0.5 * (a.Elasticity() + b.Elasticity())
-	origAVel := aState.VelocityAt(col.point)
-	origBVel := bState.VelocityAt(col.point)
+	origAVel := VelocityAt(a, col.point)
+	origBVel := VelocityAt(b, col.point)
 	aSpeed, aLeftover := decomposeAxis(origAVel, col.normal)
 	bSpeed, bLeftover := decomposeAxis(origBVel, col.normal)
 	newASpeed := calculateFinalSpeed(a.Mass(), b.Mass(), combinedElasticity, aSpeed, bSpeed)
@@ -67,19 +65,11 @@ func checkActiveBodies(a, b ActivePhysicsBody) (Collision, bool) {
 
 	correction := col.normal.Scaled(col.overlap / 2)
 
-	a.SetState(BodyState{
-		Position:        aState.Position.Sub(correction),
-		Velocity:        aState.Velocity.Add(newAVel.Sub(origAVel)), // Accounts for velocity at rotation point
-		Angle:           aState.Angle,
-		AngularVelocity: aState.AngularVelocity,
-	})
+	a.SetPosition(a.Position().Sub(correction))
+	a.SetVelocity(a.Velocity().Add(newAVel.Sub(origAVel)))
 
-	b.SetState(BodyState{
-		Position:        bState.Position.Add(correction),
-		Velocity:        bState.Velocity.Add(newBVel.Sub(origBVel)),
-		Angle:           bState.Angle,
-		AngularVelocity: bState.AngularVelocity,
-	})
+	b.SetPosition(b.Position().Add(correction))
+	b.SetVelocity(b.Velocity().Add(newBVel.Sub(origBVel)))
 
 	return Collision{
 		Self:   a,
@@ -95,23 +85,17 @@ func checkActiveAndKinematicBodies(a ActivePhysicsBody, b PhysicsBody) (Collisio
 	if !col.collided {
 		return Collision{}, false
 	}
-	aState := a.State()
-	bState := b.State()
 
 	combinedElasticity := 0.5 * (a.Elasticity() + b.Elasticity())
-	aSpeed, aLeftover := decomposeAxis(aState.Velocity, col.normal)
-	bSpeed, _ := decomposeAxis(bState.Velocity, col.normal)
+	aSpeed, aLeftover := decomposeAxis(a.Velocity(), col.normal)
+	bSpeed, _ := decomposeAxis(b.Velocity(), col.normal)
 	newASpeed := calculateFinalVelocityLimInf(combinedElasticity, aSpeed, bSpeed)
 	newAVel := recomposeAxis(aLeftover, col.normal, newASpeed)
 
 	correction := col.normal.Scaled(col.overlap)
 
-	a.SetState(BodyState{
-		Position:        aState.Position.Sub(correction),
-		Velocity:        newAVel,
-		Angle:           aState.Angle,
-		AngularVelocity: aState.AngularVelocity,
-	})
+	a.SetPosition(a.Position().Sub(correction))
+	a.SetVelocity(newAVel)
 
 	return Collision{
 		Self:   a,

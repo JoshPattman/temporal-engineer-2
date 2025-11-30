@@ -1,4 +1,4 @@
-package main
+package entities
 
 import (
 	"ent"
@@ -26,13 +26,10 @@ func NewPlayer() *Player {
 var _ ent.ActivePhysicsBody = &Player{}
 
 type Player struct {
-	ent.MinimalEntity
-	ent.MinimalDraw
-	ent.MinimalUpdater
-	ent.MinimalActivePhysicsBody
-	Transform
-	velocity         pixel.Vec
-	angularSpeed     float64
+	ent.CoreEntity
+	ent.WithDraw
+	ent.WithUpdate
+	ent.WithActivePhysics
 	sprite           *pixel.Sprite
 	bubbleSprite     *pixel.Sprite
 	radius           float64
@@ -53,44 +50,11 @@ type Player struct {
 	lastfx           ent.BodyEffects
 }
 
-// Elasticity implements ent.ActivePhysicsBody.
-func (p *Player) Elasticity() float64 {
-	return 0.3
-}
-
-// IsPhysicsActive implements ent.ActivePhysicsBody.
-func (p *Player) IsPhysicsActive() bool {
-	return true
-}
-
-// Mass implements ent.ActivePhysicsBody.
-func (p *Player) Mass() float64 {
-	return 1
-}
-
-// SetState implements ent.ActivePhysicsBody.
-func (p *Player) SetState(state ent.BodyState) {
-	p.pos = state.Position
-	p.velocity = state.Velocity
-	p.angularSpeed = state.AngularVelocity
-	p.rot = state.Angle
-}
-
 // Shape implements ent.ActivePhysicsBody.
 func (p *Player) Shape() ent.Shape {
 	return ent.Circle{
-		Center: p.pos,
+		Center: p.Position(),
 		Radius: p.radius,
-	}
-}
-
-// State implements ent.ActivePhysicsBody.
-func (p *Player) State() ent.BodyState {
-	return ent.BodyState{
-		Position:        p.pos,
-		Velocity:        p.velocity,
-		Angle:           p.rot,
-		AngularVelocity: p.angularSpeed,
 	}
 }
 
@@ -107,7 +71,7 @@ func (p *Player) Update(win *pixelgl.Window, entities *ent.World, dt float64) ([
 	// Deal with dead player
 	if p.dead {
 		return []ent.Entity{
-				NewExplosion(p.pos, 1),
+				NewExplosion(p.Position(), 1),
 				NewPlayer(),
 			}, []ent.Entity{
 				p,
@@ -139,11 +103,11 @@ func (p *Player) Update(win *pixelgl.Window, entities *ent.World, dt float64) ([
 		asteroid, ok := p.getTargetAsteroid(entities)
 		if !ok {
 			p.mining = false
-		} else if asteroid.State().Position.To(p.Position()).Len() > 10 {
+		} else if asteroid.Position().To(p.Position()).Len() > 10 {
 			p.mining = false
 			entities.RemoveTags(asteroid, "player_target")
 		} else {
-			p.miningPos = asteroid.State().Position
+			p.miningPos = asteroid.Position()
 		}
 		p.miningTimer += dt
 		if p.miningTimer > 1 {
@@ -152,9 +116,9 @@ func (p *Player) Update(win *pixelgl.Window, entities *ent.World, dt float64) ([
 			asteroid.resources--
 			if asteroid.resources <= 0 {
 				destroyAsteroids = append(destroyAsteroids, asteroid)
-				addExplosions = append(addExplosions, NewExplosion(asteroid.State().Position, asteroid.Radius()))
+				addExplosions = append(addExplosions, NewExplosion(asteroid.Position(), asteroid.Radius()))
 			} else {
-				edgePos := asteroid.State().Position.To(p.pos).Unit().Scaled(asteroid.radius).Add(asteroid.State().Position)
+				edgePos := asteroid.Position().To(p.Position()).Unit().Scaled(asteroid.radius).Add(asteroid.Position())
 				addExplosions = append(addExplosions, NewExplosion(edgePos, 0.3))
 			}
 		}
@@ -163,7 +127,7 @@ func (p *Player) Update(win *pixelgl.Window, entities *ent.World, dt float64) ([
 	// Handle ship movement
 	fx := ent.BodyEffects{}
 	if win.Pressed(pixelgl.KeyW) {
-		fx.Force = fx.Force.Add(p.Forward().Scaled(p.boosterForce))
+		fx.Force = fx.Force.Add(ent.Forward(p).Scaled(p.boosterForce))
 	}
 	if win.Pressed(pixelgl.KeyA) {
 		fx.Torque += p.boosterTorue
@@ -171,8 +135,8 @@ func (p *Player) Update(win *pixelgl.Window, entities *ent.World, dt float64) ([
 	if win.Pressed(pixelgl.KeyD) {
 		fx.Torque -= p.boosterTorue
 	}
-	fx.Force = fx.Force.Add(ent.CalculateDragForce(p.velocity, p.linearDragCoeff, 0.5))
-	fx.Torque += ent.CalculateDragTorque(p.angularSpeed, p.angularDragCoeff, 0.8)
+	fx.Force = fx.Force.Add(ent.CalculateDragForce(p.Velocity(), p.linearDragCoeff, 0.5))
+	fx.Torque += ent.CalculateDragTorque(p.AngularVelocity(), p.angularDragCoeff, 0.8)
 	p.lastfx = fx
 
 	// Handle timers
@@ -205,7 +169,7 @@ func (p *Player) selectClosestAsteroid(entities *ent.World) (*Asteroid, bool) {
 func (p *Player) Draw(win *pixelgl.Window, _ *ent.World, worldToScreen pixel.Matrix) {
 	if p.mining {
 		t := NewTether()
-		t.end = p.pos
+		t.end = p.Position()
 		t.start = p.miningPos
 		t.inverted = p.invert
 		t.Draw(win, worldToScreen)
@@ -217,7 +181,7 @@ func (p *Player) Draw(win *pixelgl.Window, _ *ent.World, worldToScreen pixel.Mat
 		pixel.ZV,
 		-math.Pi/2,
 	).Chained(
-		p.Mat(),
+		ent.TransMat(p),
 	).Chained(
 		worldToScreen,
 	)
@@ -242,7 +206,7 @@ func (p *Player) OnCollision(col ent.Collision) {
 	}
 	if p.lastDamageTimer > 0.5 {
 		p.lastDamageTimer = 0
-		p.velocity = p.velocity.Add(col.Normal.Scaled(10))
+		p.SetVelocity(p.Velocity().Add(col.Normal.Scaled(10)))
 		p.bubbleTimer = 0.5
 		p.sheilds--
 	}
@@ -284,9 +248,9 @@ func NewExplosion(at pixel.Vec, scale float64) *Explosion {
 var _ ent.Entity = &Explosion{}
 
 type Explosion struct {
-	ent.MinimalEntity
-	ent.MinimalDraw
-	ent.MinimalUpdater
+	ent.CoreEntity
+	ent.WithDraw
+	ent.WithUpdate
 	pos     pixel.Vec
 	timer   float64
 	sprites []*pixel.Sprite

@@ -1,4 +1,4 @@
-package main
+package entities
 
 import (
 	"ent"
@@ -44,15 +44,15 @@ func NewAsteroid(world *ent.World, typ AsteroidType) *Asteroid {
 		tagName:   tagName,
 		resources: resources,
 	}
-	ast.SetState(ast.State().WithPosition(pixel.V(rand.Float64()*100, rand.Float64()*100)))
+	ast.SetPosition(pixel.V(rand.Float64()*100, rand.Float64()*100))
 	return ast
 }
 
 type Asteroid struct {
-	ent.MinimalEntity
-	ent.MinimalActivePhysicsBody
-	ent.MinimalUpdater
-	ent.MinimalDraw
+	ent.CoreEntity
+	ent.WithActivePhysics
+	ent.WithUpdate
+	ent.WithDraw
 	batchName string
 	tagName   string
 	sprite    *pixel.Sprite
@@ -64,7 +64,7 @@ type Asteroid struct {
 // Shape implements ent.ActivePhysicsBody.
 func (a *Asteroid) Shape() ent.Shape {
 	return ent.Circle{
-		Center: a.State().Position,
+		Center: a.Position(),
 		Radius: a.radius,
 	}
 }
@@ -85,7 +85,7 @@ func (a *Asteroid) Update(win *pixelgl.Window, entities *ent.World, dt float64) 
 		),
 	)
 	if ok {
-		dist := player.Position().To(a.State().Position).Len()
+		dist := player.Position().To(a.Position()).Len()
 		if dist > 40 {
 			return nil, []ent.Entity{a}
 		}
@@ -108,7 +108,7 @@ func (a *Asteroid) Draw(win *pixelgl.Window, world *ent.World, worldToScreen pix
 			pixel.ZV,
 			a.radius*2.0/a.sprite.Frame().W(),
 		).Chained(
-			ent.PhysicsBodyMat(a),
+			ent.TransMat(a),
 		).Chained(
 			worldToScreen,
 		),
@@ -122,8 +122,8 @@ func NewAsteroidSpawner() *AsteroidSpawner {
 }
 
 type AsteroidSpawner struct {
-	ent.MinimalEntity
-	ent.MinimalUpdater
+	ent.CoreEntity
+	ent.WithUpdate
 	timer float64
 }
 
@@ -147,10 +147,8 @@ func (a *AsteroidSpawner) Update(win *pixelgl.Window, world *ent.World, dt float
 		} else {
 			asteroid = NewAsteroid(world, MineableAsteroid)
 		}
-		state := asteroid.State()
-		state.Velocity = pixel.V(3+rand.Float64()*7, 0).Rotated(rand.Float64() * math.Pi * 2)
-		state.Position = player.Position().Add(pixel.V(35, 0).Rotated(rand.Float64() * math.Pi * 2))
-		asteroid.SetState(state)
+		asteroid.SetVelocity(pixel.V(3+rand.Float64()*7, 0).Rotated(rand.Float64() * math.Pi * 2))
+		asteroid.SetPosition(player.Position().Add(pixel.V(35, 0).Rotated(rand.Float64() * math.Pi * 2)))
 		return []ent.Entity{
 			asteroid.(ent.Entity),
 		}, nil

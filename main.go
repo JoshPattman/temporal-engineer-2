@@ -1,19 +1,18 @@
 package main
 
 import (
+	"te2/entities"
+
 	"github.com/gopxl/pixel"
 	"github.com/gopxl/pixel/pixelgl"
 )
-
-var GlobalSpriteManager *SpriteManager
 
 func main() {
 	pixelgl.Run(run)
 }
 
 func run() {
-	GlobalSpriteManager = NewSpriteManager("sprites")
-
+	entities.GlobalSpriteManager = entities.NewSpriteManager("sprites")
 	cfg := pixelgl.WindowConfig{
 		Title:  "Temporal Engineer",
 		VSync:  true,

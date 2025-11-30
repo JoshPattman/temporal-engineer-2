@@ -1,4 +1,4 @@
-package main
+package entities
 
 import (
 	"ent"
@@ -14,8 +14,8 @@ func NewCamera() *Camera {
 }
 
 type Camera struct {
-	ent.MinimalEntity
-	ent.MinimalUpdater
+	ent.CoreEntity
+	ent.WithUpdate
 	pos pixel.Vec
 }
 

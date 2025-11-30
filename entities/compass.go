@@ -1,4 +1,4 @@
-package main
+package entities
 
 import (
 	"ent"
@@ -18,9 +18,9 @@ func NewCompass() *Compass {
 }
 
 type Compass struct {
-	ent.MinimalEntity
-	ent.MinimalDraw
-	ent.MinimalUpdater
+	ent.CoreEntity
+	ent.WithDraw
+	ent.WithUpdate
 	sprite *pixel.Sprite
 	angle  float64
 }
@@ -52,7 +52,7 @@ func (c *Compass) Update(win *pixelgl.Window, all *ent.World, dt float64) (toCre
 	if !ok {
 		return nil, nil
 	}
-	c.angle = player.pos.Angle()
+	c.angle = player.Position().Angle()
 	return nil, nil
 }
 

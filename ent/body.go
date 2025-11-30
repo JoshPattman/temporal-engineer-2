@@ -6,38 +6,10 @@ import (
 	"github.com/gopxl/pixel"
 )
 
-// Describes the state of a physics-enabled body.
-// This is applicable to both active and kinematic bodies.
-type BodyState struct {
-	Position        pixel.Vec
-	Velocity        pixel.Vec
-	Angle           float64
-	AngularVelocity float64
-}
-
-func (bs BodyState) VelocityAt(pt pixel.Vec) pixel.Vec {
-	if pt == bs.Position {
-		return bs.Velocity
-	}
-	dist := bs.Position.To(pt).Len()
-	dir := bs.Position.To(pt).Scaled(1 / dist)
-	distPerRad := dist // love maths
-	return bs.Velocity.Add(dir.Rotated(math.Pi / 2).Scaled(bs.AngularVelocity * distPerRad))
-}
-
-func (bs BodyState) WithPosition(pos pixel.Vec) BodyState {
-	return BodyState{
-		Position:        pos,
-		Velocity:        bs.Velocity,
-		Angle:           bs.Angle,
-		AngularVelocity: bs.AngularVelocity,
-	}
-}
-
 // A body that has physics and the ability to affect other bodies in the world.
 type PhysicsBody interface {
 	UUIDer
-	State() BodyState
+	DynamicTransform
 	Shape() Shape
 	Elasticity() float64
 }
@@ -45,10 +17,14 @@ type PhysicsBody interface {
 // A body that not only has physics, but is able to react to other bodies in the world.
 type ActivePhysicsBody interface {
 	PhysicsBody
-	SetState(BodyState)
-	Mass() float64
+	EulerUpdateable
 	IsPhysicsActive() bool
 	PysicsUpdate(dt float64)
+}
+
+type EulerUpdateable interface {
+	ActiveDynamicTransform
+	Mass() float64
 }
 
 // Calculate the force of drag by summing the natural and linear drag forces, scaled by their multipliers.
@@ -79,28 +55,12 @@ type BodyEffects struct {
 	Torque  float64
 }
 
-type EulerUpdateable interface {
-	State() BodyState
-	SetState(BodyState)
-	Mass() float64
-}
-
 // Update an active physics body using euler rules with some effects and a time interval.
 func EulerStateUpdate(body EulerUpdateable, effects BodyEffects, dt float64) {
-	state := body.State()
 	acceleration := effects.Force.Scaled(1.0 / body.Mass())
-	state.Velocity = state.Velocity.Add(acceleration.Scaled(dt).Add(effects.Impulse))
-	state.Position = state.Position.Add(state.Velocity.Scaled(dt))
+	body.SetVelocity(body.Velocity().Add(acceleration.Scaled(dt).Add(effects.Impulse)))
+	body.SetPosition(body.Position().Add(body.Velocity().Scaled(dt)))
 	angularAcceleration := effects.Torque / body.Mass()
-	state.AngularVelocity += angularAcceleration * dt
-	state.Angle += state.AngularVelocity * dt
-	body.SetState(state)
-}
-
-func PhysicsBodyMat(body PhysicsBody) pixel.Matrix {
-	return pixel.IM.Rotated(
-		pixel.ZV, body.State().Angle,
-	).Moved(
-		body.State().Position,
-	)
+	body.SetAngularVelocity(body.AngularVelocity() + angularAcceleration*dt)
+	body.SetAngle(body.Angle() + body.AngularVelocity()*dt)
 }

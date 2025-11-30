@@ -1,4 +1,4 @@
-package main
+package entities
 
 import (
 	"ent"
@@ -20,8 +20,8 @@ func NewBatchDraw(spritePath string, tag string) *BatchDraw {
 }
 
 type BatchDraw struct {
-	ent.MinimalEntity
-	ent.MinimalDraw
+	ent.CoreEntity
+	ent.WithDraw
 	Batch *pixel.Batch
 	tag   string
 }

@@ -1,4 +1,4 @@
-package main
+package entities
 
 import (
 	"ent"
@@ -25,8 +25,8 @@ func NewBackground() *Background {
 }
 
 type Background struct {
-	ent.MinimalEntity
-	ent.MinimalDraw
+	ent.CoreEntity
+	ent.WithDraw
 	l1 *pixel.Sprite
 	l2 *pixel.Sprite
 	l3 *pixel.Sprite
