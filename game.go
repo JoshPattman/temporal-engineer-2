@@ -19,6 +19,7 @@ func NewGame() Screen {
 		NewPlayer(),
 		NewAsteroidSpawner(),
 		NewSheildsIndicator(),
+		NewMineralsIndicator(),
 	)
 	return &Game{
 		world: world,
