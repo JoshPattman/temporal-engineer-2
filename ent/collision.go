@@ -26,7 +26,7 @@ func (c Collision) ForOther() Collision {
 	}
 }
 
-func calculateFinalVelocity(m1, m2, e, u1, u2 float64) float64 {
+func calculateFinalSpeed(m1, m2, e, u1, u2 float64) float64 {
 	return (((m1 - e*m2) * u1) + (((1 + e) * m2) * u2)) / (m1 + m2)
 }
 
@@ -56,10 +56,12 @@ func checkActiveBodies(a, b ActivePhysicsBody) (Collision, bool) {
 	bState := b.State()
 
 	combinedElasticity := 0.5 * (a.Elasticity() + b.Elasticity())
-	aSpeed, aLeftover := decomposeAxis(aState.Velocity, col.normal)
-	bSpeed, bLeftover := decomposeAxis(bState.Velocity, col.normal)
-	newASpeed := calculateFinalVelocity(a.Mass(), b.Mass(), combinedElasticity, aSpeed, bSpeed)
-	newBSpeed := calculateFinalVelocity(b.Mass(), a.Mass(), combinedElasticity, bSpeed, aSpeed)
+	origAVel := aState.VelocityAt(col.point)
+	origBVel := bState.VelocityAt(col.point)
+	aSpeed, aLeftover := decomposeAxis(origAVel, col.normal)
+	bSpeed, bLeftover := decomposeAxis(origBVel, col.normal)
+	newASpeed := calculateFinalSpeed(a.Mass(), b.Mass(), combinedElasticity, aSpeed, bSpeed)
+	newBSpeed := calculateFinalSpeed(b.Mass(), a.Mass(), combinedElasticity, bSpeed, aSpeed)
 	newAVel := recomposeAxis(aLeftover, col.normal, newASpeed)
 	newBVel := recomposeAxis(bLeftover, col.normal, newBSpeed)
 
@@ -67,14 +69,14 @@ func checkActiveBodies(a, b ActivePhysicsBody) (Collision, bool) {
 
 	a.SetState(BodyState{
 		Position:        aState.Position.Sub(correction),
-		Velocity:        newAVel,
+		Velocity:        aState.Velocity.Add(newAVel.Sub(origAVel)), // Accounts for velocity at rotation point
 		Angle:           aState.Angle,
 		AngularVelocity: aState.AngularVelocity,
 	})
 
 	b.SetState(BodyState{
 		Position:        bState.Position.Add(correction),
-		Velocity:        newBVel,
+		Velocity:        bState.Velocity.Add(newBVel.Sub(origBVel)),
 		Angle:           bState.Angle,
 		AngularVelocity: bState.AngularVelocity,
 	})
@@ -83,6 +85,7 @@ func checkActiveBodies(a, b ActivePhysicsBody) (Collision, bool) {
 		Self:   a,
 		Other:  b,
 		Normal: col.normal.Scaled(-1),
+		Point:  col.point,
 	}, true
 }
 
@@ -114,6 +117,7 @@ func checkActiveAndKinematicBodies(a ActivePhysicsBody, b PhysicsBody) (Collisio
 		Self:   a,
 		Other:  b,
 		Normal: col.normal.Scaled(-1),
+		Point:  col.point,
 	}, true
 }
 

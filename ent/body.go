@@ -15,6 +15,16 @@ type BodyState struct {
 	AngularVelocity float64
 }
 
+func (bs BodyState) VelocityAt(pt pixel.Vec) pixel.Vec {
+	if pt == bs.Position {
+		return bs.Velocity
+	}
+	dist := bs.Position.To(pt).Len()
+	dir := bs.Position.To(pt).Scaled(1 / dist)
+	distPerRad := dist // love maths
+	return bs.Velocity.Add(dir.Rotated(math.Pi / 2).Scaled(bs.AngularVelocity * distPerRad))
+}
+
 // A body that has physics and the ability to affect other bodies in the world.
 type PhysicsBody interface {
 	UUIDer

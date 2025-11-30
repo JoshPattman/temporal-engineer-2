@@ -74,9 +74,21 @@ func (p *Player) SetState(state ent.BodyState) {
 
 // Shape implements ent.ActivePhysicsBody.
 func (p *Player) Shape() ent.Shape {
-	return ent.Circle{
-		Center: p.pos,
-		Radius: p.radius,
+	// return ent.Circle{
+	// 	Center: p.pos,
+	// 	Radius: p.radius,
+	// }
+	return ent.MultiShape{
+		Shapes: []ent.Shape{
+			ent.Circle{
+				Center: p.pos,
+				Radius: p.radius,
+			},
+			ent.Line{
+				A: p.pos,
+				B: p.pos.Add(p.Forward().Scaled(6)),
+			},
+		},
 	}
 }
 
