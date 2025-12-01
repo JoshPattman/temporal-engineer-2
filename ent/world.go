@@ -51,7 +51,7 @@ func (es *World) Add(toAdd ...Entity) {
 		es.physicsBodies.AddUntyped(e)
 		e.AfterAdd(es)
 		for _, sig := range es.queuedAddWaitingSignals[e.UUID()] {
-			e.HandleMessage(sig)
+			e.HandleMessage(es, sig)
 		}
 		delete(es.queuedAddWaitingSignals, e.UUID())
 	}

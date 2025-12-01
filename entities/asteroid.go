@@ -33,6 +33,7 @@ func NewAsteroid(typ AsteroidType) *Asteroid {
 		batchName: batchName,
 		tagName:   tagName,
 		resources: resources,
+		toMiners:  ent.NewBus(),
 	}
 	ast.SetPosition(pixel.V(rand.Float64()*100, rand.Float64()*100))
 	return ast
@@ -56,6 +57,7 @@ type Asteroid struct {
 	velocity  pixel.Vec
 	radius    float64
 	resources int
+	toMiners  *ent.Bus
 }
 
 // Shape implements ent.ActivePhysicsBody.
@@ -110,4 +112,40 @@ func (a *Asteroid) Draw(win *pixelgl.Window, world *ent.World, worldToScreen pix
 			worldToScreen,
 		),
 	)
+}
+
+func (a *Asteroid) ToMiners() *ent.Bus { return a.toMiners }
+
+type MineAsteroid struct {
+	From pixel.Vec
+}
+
+type AsteroidDestroyed struct{}
+
+type AsteroidOutOfRange struct{}
+
+type CheckOutOfMiningRange struct {
+	From    pixel.Vec
+	MaxDist float64
+}
+
+func (a *Asteroid) HandleMessage(world *ent.World, msg any) {
+	switch msg := msg.(type) {
+	case MineAsteroid:
+		a.resources--
+		destroy := a.resources <= 0
+		if destroy {
+			ent.Emit(world, a.toMiners, AsteroidDestroyed{})
+			world.Destroy(a)
+			world.Instantiate(NewExplosion(a.Position(), a.Radius()))
+		} else {
+			edgePos := a.Position().To(msg.From).Unit().Scaled(a.radius).Add(a.Position())
+			world.Instantiate(NewExplosion(edgePos, 0.3))
+		}
+	case CheckOutOfMiningRange:
+		if a.Position().To(msg.From).Len() > msg.MaxDist {
+			ent.Emit(world, a.toMiners, AsteroidOutOfRange{})
+			ent.UnsubscribeAll(a.toMiners)
+		}
+	}
 }

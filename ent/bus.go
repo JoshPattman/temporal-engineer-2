@@ -1,6 +1,8 @@
 package ent
 
-import "slices"
+import (
+	"slices"
+)
 
 func NewBus() *Bus {
 	return &Bus{}
@@ -22,7 +24,7 @@ func Emit(w *World, b *Bus, d any) {
 		// otherwise, queue it to be sent once the entity is added (so we dont drop signals).
 		e, ok := w.WithUUID(l)
 		if ok {
-			e.HandleMessage(d)
+			e.HandleMessage(w, d)
 		} else {
 			w.queuedAddWaitingSignals[l] = append(w.queuedAddWaitingSignals[l], d)
 		}
@@ -31,10 +33,14 @@ func Emit(w *World, b *Bus, d any) {
 }
 
 func Subscribe(b *Bus, es ...EntityUUIDer) {
-	for _, e := range b.listeners {
-		if slices.Contains(b.listeners, e) {
+	for _, e := range es {
+		if slices.Contains(b.listeners, e.UUID()) {
 			continue
 		}
-		b.listeners = append(b.listeners, e)
+		b.listeners = append(b.listeners, e.UUID())
 	}
+}
+
+func UnsubscribeAll(b *Bus) {
+	b.listeners = nil
 }

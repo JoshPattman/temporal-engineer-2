@@ -20,7 +20,7 @@ func (e *CoreEntity) UUID() EntityUUID {
 
 func (e *CoreEntity) AfterAdd(*World) {}
 
-func (e *CoreEntity) HandleMessage(any) {}
+func (e *CoreEntity) HandleMessage(*World, any) {}
 
 // Compose additionally with MinimalEntity to provide basic behaviour to implement Drawer.
 type WithDraw struct{}

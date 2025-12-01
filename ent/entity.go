@@ -42,5 +42,5 @@ type EntityUUIDer interface {
 type Entity interface {
 	EntityUUIDer
 	AfterAdd(*World)
-	HandleMessage(any)
+	HandleMessage(*World, any)
 }

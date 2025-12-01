@@ -21,6 +21,7 @@ func NewPlayer() *Player {
 		bubbleSprite:     bubbleSprite,
 		sheilds:          3,
 		toMiningBeams:    ent.NewBus(),
+		toAsteroids:      ent.NewBus(),
 	}
 }
 
@@ -41,10 +42,12 @@ type Player struct {
 	sheilds          int
 	dead             bool
 	minerals         int
-	miningTimer      float64
-	miningAsteroid   ent.EntityUUID
 	lastfx           ent.BodyEffects
-	toMiningBeams    *ent.Bus
+
+	mining        bool
+	miningTimer   float64
+	toMiningBeams *ent.Bus
+	toAsteroids   *ent.Bus
 }
 
 func (p *Player) AfterAdd(w *ent.World) {
@@ -63,53 +66,48 @@ func (p *Player) Radius() float64 {
 	return p.radius
 }
 
-type MiningBeamOff struct{}
-
-func (p *Player) Update(win *pixelgl.Window, entities *ent.World, dt float64) {
+func (p *Player) Update(win *pixelgl.Window, world *ent.World, dt float64) {
 	// Deal with dead player
 	if p.dead {
-		entities.Instantiate(
+		world.Instantiate(
 			NewExplosion(p.Position(), 1),
 			NewPlayer(),
 		)
-		entities.Destroy(p)
+		world.Destroy(p)
+		ent.Emit(world, p.toMiningBeams, MiningBeamOff{})
 		return
 	}
 	// Handle state changes of mining
 	if win.JustPressed(pixelgl.KeySpace) {
-		asteroid, ok := p.selectClosestAsteroid(entities)
+		asteroid, ok := p.selectClosestAsteroid(world)
 		if ok {
 			beam := NewMiningBeam(p.UUID(), asteroid.UUID())
+			world.Instantiate(beam)
 			ent.Subscribe(p.toMiningBeams, beam)
+			ent.Subscribe(p.toAsteroids, asteroid)
+			ent.Subscribe(asteroid.ToMiners(), p)
 			p.miningTimer = 0
-			entities.Instantiate(beam)
-			p.miningAsteroid = asteroid.UUID()
+			p.mining = true
 		}
 	} else if win.JustReleased(pixelgl.KeySpace) {
-		p.miningAsteroid = ""
-		ent.Emit(entities, p.toMiningBeams, MiningBeamOff{})
+		ent.UnsubscribeAll(p.toAsteroids)
+		ent.Emit(world, p.toMiningBeams, MiningBeamOff{})
+		p.mining = false
 	}
 
 	// Handle mining
-	if p.miningAsteroid != "" {
-		asteroid, ok := p.getTargetAsteroid(entities)
-		if !ok || asteroid.Position().To(p.Position()).Len() > 10 {
-			p.miningAsteroid = ""
-			ent.Emit(entities, p.toMiningBeams, MiningBeamOff{})
-		} else {
-			p.miningTimer += dt
-			if p.miningTimer > 1 {
-				p.miningTimer = 0
-				p.minerals++
-				asteroid.resources--
-				if asteroid.resources <= 0 {
-					entities.Destroy(asteroid)
-					entities.Instantiate(NewExplosion(asteroid.Position(), asteroid.Radius()))
-				} else {
-					edgePos := asteroid.Position().To(p.Position()).Unit().Scaled(asteroid.radius).Add(asteroid.Position())
-					entities.Instantiate(NewExplosion(edgePos, 0.3))
-				}
-			}
+	if p.mining {
+		p.miningTimer += dt
+		ent.Emit(world, p.toAsteroids, CheckOutOfMiningRange{
+			From:    p.Position(),
+			MaxDist: 10,
+		})
+		if p.miningTimer > 1 {
+			p.miningTimer = 0
+			p.minerals++
+			ent.Emit(world, p.toAsteroids, MineAsteroid{
+				p.Position(),
+			})
 		}
 	}
 
@@ -133,12 +131,17 @@ func (p *Player) Update(win *pixelgl.Window, entities *ent.World, dt float64) {
 	p.bubbleTimer -= dt
 }
 
-func (p *Player) PysicsUpdate(dt float64) {
-	ent.EulerStateUpdate(p, p.lastfx, dt)
+func (p *Player) HandleMessage(world *ent.World, msg any) {
+	switch msg.(type) {
+	case AsteroidDestroyed, AsteroidOutOfRange:
+		ent.UnsubscribeAll(p.toAsteroids)
+		ent.Emit(world, p.toMiningBeams, MiningBeamOff{})
+		p.mining = false
+	}
 }
 
-func (p *Player) getTargetAsteroid(entities *ent.World) (*Asteroid, bool) {
-	return ent.OneOfType[*Asteroid](entities.WithUUID(p.miningAsteroid))
+func (p *Player) PysicsUpdate(dt float64) {
+	ent.EulerStateUpdate(p, p.lastfx, dt)
 }
 
 func (p *Player) selectClosestAsteroid(entities *ent.World) (*Asteroid, bool) {

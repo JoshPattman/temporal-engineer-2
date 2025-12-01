@@ -72,3 +72,12 @@ func (e *MiningBeam) Draw(win *pixelgl.Window, _ *ent.World, worldToScreen pixel
 func (e *MiningBeam) Destroy(struct{}) {
 	e.destroy = true
 }
+
+type MiningBeamOff struct{}
+
+func (e *MiningBeam) HandleMessage(world *ent.World, msg any) {
+	switch msg.(type) {
+	case MiningBeamOff:
+		world.Destroy(e)
+	}
+}
