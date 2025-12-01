@@ -44,7 +44,7 @@ func (c *Compass) DrawLayer() int {
 func (c *Compass) Update(win *pixelgl.Window, all *ent.World, dt float64) {
 	player, ok := ent.First(
 		ent.OfType[*Player](
-			all.ForTag("player"),
+			all.WithTag("player"),
 		),
 	)
 	if !ok {

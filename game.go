@@ -10,7 +10,7 @@ import (
 
 func NewGame() Screen {
 	world := ent.NewWorld()
-	world.Add(
+	world.AddNow(
 		entities.NewCamera(),
 		entities.NewStation(),
 		entities.NewCompass(),
@@ -42,7 +42,7 @@ func (g *Game) Draw(win *pixelgl.Window) {
 	camMat := pixel.IM.Scaled(pixel.ZV, 20).Moved(win.Bounds().Center())
 	camera, ok := ent.First(
 		ent.OfType[entities.CameraTarget](
-			g.world.ForTag("camera"),
+			g.world.WithTag("camera"),
 		),
 	)
 	if ok {

@@ -23,7 +23,7 @@ type AsteroidSpawner struct {
 func (a *AsteroidSpawner) Update(win *pixelgl.Window, world *ent.World, dt float64) {
 	player, ok := ent.First(
 		ent.OfType[*Player](
-			world.ForTag("player"),
+			world.WithTag("player"),
 		),
 	)
 	if !ok {
@@ -41,6 +41,6 @@ func (a *AsteroidSpawner) Update(win *pixelgl.Window, world *ent.World, dt float
 		}
 		asteroid.SetVelocity(pixel.V(3+rand.Float64()*7, 0).Rotated(rand.Float64() * math.Pi * 2))
 		asteroid.SetPosition(player.Position().Add(pixel.V(35, 0).Rotated(rand.Float64() * math.Pi * 2)))
-		world.Instantiate(asteroid)
+		world.Add(asteroid)
 	}
 }

@@ -44,7 +44,7 @@ func (e *MiningBeam) Update(win *pixelgl.Window, world *ent.World, dt float64) {
 		e.inverted = !e.inverted
 	}
 	if e.destroy {
-		world.Destroy(e)
+		world.Remove(e)
 	}
 }
 
@@ -78,6 +78,6 @@ type MiningBeamOff struct{}
 func (e *MiningBeam) HandleMessage(world *ent.World, msg any) {
 	switch msg.(type) {
 	case MiningBeamOff:
-		world.Destroy(e)
+		world.Remove(e)
 	}
 }

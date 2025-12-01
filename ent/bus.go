@@ -41,6 +41,16 @@ func Subscribe(b *Bus, es ...EntityUUIDer) {
 	}
 }
 
+func Unsubscribe(b *Bus, es ...EntityUUIDer) {
+	toDelete := make([]EntityUUID, len(es))
+	for i, e := range es {
+		toDelete[i] = e.UUID()
+	}
+	b.listeners = slices.DeleteFunc(b.listeners, func(eid EntityUUID) bool {
+		return slices.Contains(toDelete, eid)
+	})
+}
+
 func UnsubscribeAll(b *Bus) {
 	b.listeners = nil
 }

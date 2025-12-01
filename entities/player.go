@@ -69,11 +69,11 @@ func (p *Player) Radius() float64 {
 func (p *Player) Update(win *pixelgl.Window, world *ent.World, dt float64) {
 	// Deal with dead player
 	if p.dead {
-		world.Instantiate(
+		world.Add(
 			NewExplosion(p.Position(), 1),
 			NewPlayer(),
 		)
-		world.Destroy(p)
+		world.Remove(p)
 		ent.Emit(world, p.toMiningBeams, MiningBeamOff{})
 		return
 	}
@@ -82,7 +82,7 @@ func (p *Player) Update(win *pixelgl.Window, world *ent.World, dt float64) {
 		asteroid, ok := p.selectClosestAsteroid(world)
 		if ok {
 			beam := NewMiningBeam(p.UUID(), asteroid.UUID())
-			world.Instantiate(beam)
+			world.Add(beam)
 			ent.Subscribe(p.toMiningBeams, beam)
 			ent.Subscribe(p.toAsteroids, asteroid)
 			ent.Subscribe(asteroid.ToMiners(), p)
@@ -148,7 +148,7 @@ func (p *Player) selectClosestAsteroid(entities *ent.World) (*Asteroid, bool) {
 	return ent.Closest(
 		p.Position(),
 		ent.OfType[*Asteroid](
-			entities.ForTag("mineable_asteroid"),
+			entities.WithTag("mineable_asteroid"),
 		),
 	)
 }
@@ -194,65 +194,4 @@ func (p *Player) Shields() int {
 
 func (p *Player) Minerals() int {
 	return p.minerals
-}
-
-func NewExplosion(at pixel.Vec, scale float64) *Explosion {
-	sprites := GlobalSpriteManager.TiledSprites(
-		"boom.png",
-		36,
-		[]TilePos{
-			{0, 1},
-			{1, 1},
-			{2, 1},
-			{3, 1},
-			{4, 1},
-			{0, 0},
-			{1, 0},
-			{2, 0},
-			{3, 0},
-			{4, 0},
-		},
-	)
-	return &Explosion{
-		pos:     at,
-		timer:   0,
-		sprites: sprites,
-		scale:   scale,
-	}
-}
-
-var _ ent.Entity = &Explosion{}
-
-type Explosion struct {
-	ent.CoreEntity
-	ent.WithDraw
-	ent.WithUpdate
-	pos     pixel.Vec
-	timer   float64
-	sprites []*pixel.Sprite
-	scale   float64
-}
-
-// Draw implements ent.Entity.
-func (e *Explosion) Draw(win *pixelgl.Window, _ *ent.World, worldToScreen pixel.Matrix) {
-	idx := int(e.timer / 0.5 * float64(len(e.sprites)))
-	s := e.sprites[idx]
-	s.Draw(
-		win,
-		pixel.IM.Scaled(pixel.ZV, 0.1*e.scale).Moved(e.pos).Chained(worldToScreen),
-	)
-}
-
-func (e *Explosion) DrawLayer() int { return -1 }
-
-// Update implements ent.Entity.
-func (e *Explosion) Update(win *pixelgl.Window, all *ent.World, dt float64) {
-	e.timer += dt
-	if e.timer >= 0.5 {
-		all.Destroy(e)
-	}
-}
-
-func (e *Explosion) Position() pixel.Vec {
-	return e.pos
 }

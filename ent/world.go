@@ -34,11 +34,11 @@ func NewWorld() *World {
 	}
 }
 
-// Add the entities to the world, adding it to all relevant indexes.
+// AddNow the entities to the world, adding it to all relevant indexes.
 // The entity tags at this point in time will now be used of the entity.
 // Each entity can only be added to the world once.
 // Will also call AfterAdd, and will then send any queued signals.
-func (es *World) Add(toAdd ...Entity) {
+func (es *World) AddNow(toAdd ...Entity) {
 	for _, e := range toAdd {
 		uid := e.UUID()
 		if _, ok := es.byIDLookup[uid]; ok {
@@ -58,13 +58,13 @@ func (es *World) Add(toAdd ...Entity) {
 }
 
 // Queue the entities to be added to the world when appropriate.
-func (w *World) Instantiate(toInstantiate ...Entity) {
+func (w *World) Add(toInstantiate ...Entity) {
 	w.queuedAdd = append(w.queuedAdd, toInstantiate...)
 }
 
-// Remove the entity from the world.
+// RemoveNow the entity from the world.
 // If the entity is not there, this will be a no-op.
-func (es *World) Remove(toRemove ...Entity) {
+func (es *World) RemoveNow(toRemove ...Entity) {
 	for _, e := range toRemove {
 		ok := es.allEntities.Remove(e)
 		if !ok {
@@ -83,7 +83,7 @@ func (es *World) Remove(toRemove ...Entity) {
 }
 
 // Queue the entities to be removed to the world when appropriate.
-func (w *World) Destroy(toDestroy ...Entity) {
+func (w *World) Remove(toDestroy ...Entity) {
 	w.queuedRemove = append(w.queuedRemove, toDestroy...)
 }
 
@@ -108,7 +108,7 @@ func (es *World) HasOrQueued(id EntityUUIDer) bool {
 }
 
 // Get all the entities for the given tag.
-func (es *World) ForTag(tag string) iter.Seq[Entity] {
+func (es *World) WithTag(tag string) iter.Seq[Entity] {
 	if forTag, ok := es.byTags[tag]; ok {
 		return forTag.All()
 	} else {
@@ -155,13 +155,13 @@ func (es *World) Update(win *pixelgl.Window, dt float64) {
 	}
 	for _, e := range es.queuedAdd {
 		if !es.Has(e) {
-			es.Add(e)
+			es.AddNow(e)
 		}
 	}
 	es.queuedAdd = nil
 	for _, e := range es.queuedRemove {
 		if es.Has(e) {
-			es.Remove(e)
+			es.RemoveNow(e)
 		}
 	}
 	es.queuedRemove = nil

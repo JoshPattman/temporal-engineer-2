@@ -33,7 +33,7 @@ func (c *Camera) AfterAdd(world *ent.World) {
 func (c *Camera) Update(win *pixelgl.Window, all *ent.World, dt float64) {
 	target, ok := ent.First(
 		ent.OfType[CameraTarget](
-			all.ForTag("player_camera_target"),
+			all.WithTag("player_camera_target"),
 		),
 	)
 	if !ok {

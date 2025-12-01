@@ -80,13 +80,13 @@ func (a *Asteroid) Update(win *pixelgl.Window, entities *ent.World, dt float64) 
 	// Check if out of range of player, and delete if so
 	player, ok := ent.First(
 		ent.OfType[*Player](
-			entities.ForTag("player"),
+			entities.WithTag("player"),
 		),
 	)
 	if ok {
 		dist := player.Position().To(a.Position()).Len()
 		if dist > 40 {
-			entities.Destroy(a)
+			entities.Remove(a)
 			return
 		}
 	}
@@ -95,7 +95,7 @@ func (a *Asteroid) Update(win *pixelgl.Window, entities *ent.World, dt float64) 
 func (a *Asteroid) Draw(win *pixelgl.Window, world *ent.World, worldToScreen pixel.Matrix) {
 	batch, ok := ent.First(
 		ent.OfType[*BatchDraw](
-			world.ForTag(a.batchName),
+			world.WithTag(a.batchName),
 		),
 	)
 	if !ok {
@@ -136,11 +136,11 @@ func (a *Asteroid) HandleMessage(world *ent.World, msg any) {
 		destroy := a.resources <= 0
 		if destroy {
 			ent.Emit(world, a.toMiners, AsteroidDestroyed{})
-			world.Destroy(a)
-			world.Instantiate(NewExplosion(a.Position(), a.Radius()))
+			world.Remove(a)
+			world.Add(NewExplosion(a.Position(), a.Radius()))
 		} else {
 			edgePos := a.Position().To(msg.From).Unit().Scaled(a.radius).Add(a.Position())
-			world.Instantiate(NewExplosion(edgePos, 0.3))
+			world.Add(NewExplosion(edgePos, 0.3))
 		}
 	case CheckOutOfMiningRange:
 		if a.Position().To(msg.From).Len() > msg.MaxDist {

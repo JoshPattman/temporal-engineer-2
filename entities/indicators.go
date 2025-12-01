@@ -20,7 +20,7 @@ func NewSheildsIndicator() *statsIndicator {
 	return NewStatsIndicator("bubble.png", 150, func(w *ent.World) int {
 		player, ok := ent.First(
 			ent.OfType[*Player](
-				w.ForTag("player"),
+				w.WithTag("player"),
 			),
 		)
 		if !ok {
@@ -34,7 +34,7 @@ func NewMineralsIndicator() *statsIndicator {
 	return NewStatsIndicator("minerals.png", 200, func(w *ent.World) int {
 		player, ok := ent.First(
 			ent.OfType[*Player](
-				w.ForTag("player"),
+				w.WithTag("player"),
 			),
 		)
 		if !ok {
