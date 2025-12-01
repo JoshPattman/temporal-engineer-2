@@ -8,7 +8,7 @@ import (
 
 // A body that has physics and the ability to affect other bodies in the world.
 type PhysicsBody interface {
-	UUIDer
+	EntityUUIDer
 	DynamicTransform
 	Shape() Shape
 	Elasticity() float64

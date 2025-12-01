@@ -20,6 +20,7 @@ func NewPlayer() *Player {
 		boosterTorue:     12,
 		bubbleSprite:     bubbleSprite,
 		sheilds:          3,
+		toMiningBeams:    ent.NewBus(),
 	}
 }
 
@@ -39,13 +40,15 @@ type Player struct {
 	bubbleTimer      float64
 	sheilds          int
 	dead             bool
-	miningPos        pixel.Vec
-	mining           bool
-	lastInvertTimer  float64
-	invert           bool
 	minerals         int
 	miningTimer      float64
+	miningAsteroid   ent.EntityUUID
 	lastfx           ent.BodyEffects
+	toMiningBeams    *ent.Bus
+}
+
+func (p *Player) AfterAdd(w *ent.World) {
+	w.AddTags(p, "player", "player_camera_target")
 }
 
 // Shape implements ent.ActivePhysicsBody.
@@ -60,64 +63,52 @@ func (p *Player) Radius() float64 {
 	return p.radius
 }
 
-func (p *Player) Update(win *pixelgl.Window, entities *ent.World, dt float64) ([]ent.Entity, []ent.Entity) {
-	p.lastInvertTimer += dt
-	if p.lastInvertTimer > 0.2 {
-		p.lastInvertTimer = 0
-		p.invert = !p.invert
-	}
+type MiningBeamOff struct{}
+
+func (p *Player) Update(win *pixelgl.Window, entities *ent.World, dt float64) {
 	// Deal with dead player
 	if p.dead {
-		return []ent.Entity{
-				NewExplosion(p.Position(), 1),
-				NewPlayer(),
-			}, []ent.Entity{
-				p,
-			}
+		entities.Instantiate(
+			NewExplosion(p.Position(), 1),
+			NewPlayer(),
+		)
+		entities.Destroy(p)
+		return
 	}
 	// Handle state changes of mining
 	if win.JustPressed(pixelgl.KeySpace) {
-		_, ok := p.getTargetAsteroid(entities)
-		if !ok {
-			asteroid, ok := p.selectClosestAsteroid(entities)
-			if ok {
-				entities.AddTags(asteroid, "player_target")
-			}
-		}
-		p.mining = true
-		p.miningTimer = 0
-	} else if win.JustReleased(pixelgl.KeySpace) {
-		asteroid, ok := p.getTargetAsteroid(entities)
+		asteroid, ok := p.selectClosestAsteroid(entities)
 		if ok {
-			entities.RemoveTags(asteroid, "player_target")
+			beam := NewMiningBeam(p.UUID(), asteroid.UUID())
+			ent.Subscribe(p.toMiningBeams, beam)
+			p.miningTimer = 0
+			entities.Instantiate(beam)
+			p.miningAsteroid = asteroid.UUID()
 		}
-		p.mining = false
+	} else if win.JustReleased(pixelgl.KeySpace) {
+		p.miningAsteroid = ""
+		ent.Emit(entities, p.toMiningBeams, MiningBeamOff{})
 	}
 
 	// Handle mining
-	var destroyAsteroids []ent.Entity
-	var addExplosions []ent.Entity
-	if p.mining {
+	if p.miningAsteroid != "" {
 		asteroid, ok := p.getTargetAsteroid(entities)
-		if !ok {
-			p.mining = false
-		} else if asteroid.Position().To(p.Position()).Len() > 10 {
-			p.mining = false
-			entities.RemoveTags(asteroid, "player_target")
+		if !ok || asteroid.Position().To(p.Position()).Len() > 10 {
+			p.miningAsteroid = ""
+			ent.Emit(entities, p.toMiningBeams, MiningBeamOff{})
 		} else {
-			p.miningPos = asteroid.Position()
-		}
-		p.miningTimer += dt
-		if p.miningTimer > 1 {
-			p.miningTimer = 0
-			p.minerals++
-			asteroid.resources--
-			if asteroid.resources <= 0 {
-				destroyAsteroids = append(destroyAsteroids, asteroid)
-				addExplosions = append(addExplosions, NewExplosion(asteroid.Position(), asteroid.Radius()))
-			} else {
-				edgePos := asteroid.Position().To(p.Position()).Unit().Scaled(asteroid.radius).Add(asteroid.Position())
-				addExplosions = append(addExplosions, NewExplosion(edgePos, 0.3))
+			p.miningTimer += dt
+			if p.miningTimer > 1 {
+				p.miningTimer = 0
+				p.minerals++
+				asteroid.resources--
+				if asteroid.resources <= 0 {
+					entities.Destroy(asteroid)
+					entities.Instantiate(NewExplosion(asteroid.Position(), asteroid.Radius()))
+				} else {
+					edgePos := asteroid.Position().To(p.Position()).Unit().Scaled(asteroid.radius).Add(asteroid.Position())
+					entities.Instantiate(NewExplosion(edgePos, 0.3))
+				}
 			}
 		}
 	}
@@ -140,7 +131,6 @@ func (p *Player) Update(win *pixelgl.Window, entities *ent.World, dt float64) ([
 	// Handle timers
 	p.lastDamageTimer += dt
 	p.bubbleTimer -= dt
-	return addExplosions, destroyAsteroids
 }
 
 func (p *Player) PysicsUpdate(dt float64) {
@@ -148,11 +138,7 @@ func (p *Player) PysicsUpdate(dt float64) {
 }
 
 func (p *Player) getTargetAsteroid(entities *ent.World) (*Asteroid, bool) {
-	return ent.First(
-		ent.OfType[*Asteroid](
-			entities.ForTag("player_target"),
-		),
-	)
+	return ent.OneOfType[*Asteroid](entities.WithUUID(p.miningAsteroid))
 }
 
 func (p *Player) selectClosestAsteroid(entities *ent.World) (*Asteroid, bool) {
@@ -165,13 +151,6 @@ func (p *Player) selectClosestAsteroid(entities *ent.World) (*Asteroid, bool) {
 }
 
 func (p *Player) Draw(win *pixelgl.Window, _ *ent.World, worldToScreen pixel.Matrix) {
-	if p.mining {
-		t := NewTether()
-		t.end = p.Position()
-		t.start = p.miningPos
-		t.inverted = p.invert
-		t.Draw(win, worldToScreen)
-	}
 	drawMat := pixel.IM.Scaled(
 		pixel.ZV,
 		p.radius*2.0/p.sprite.Frame().W(),
@@ -191,10 +170,6 @@ func (p *Player) Draw(win *pixelgl.Window, _ *ent.World, worldToScreen pixel.Mat
 			pixel.Alpha(p.bubbleTimer/0.5),
 		)
 	}
-}
-
-func (p *Player) AfterAdd(w *ent.World) {
-	w.AddTags(p, "player", "player_camera_target")
 }
 
 func (p *Player) OnCollision(col ent.Collision) {
@@ -268,42 +243,13 @@ func (e *Explosion) Draw(win *pixelgl.Window, _ *ent.World, worldToScreen pixel.
 func (e *Explosion) DrawLayer() int { return -1 }
 
 // Update implements ent.Entity.
-func (e *Explosion) Update(win *pixelgl.Window, all *ent.World, dt float64) (toCreate []ent.Entity, toDestroy []ent.Entity) {
+func (e *Explosion) Update(win *pixelgl.Window, all *ent.World, dt float64) {
 	e.timer += dt
 	if e.timer >= 0.5 {
-		return nil, []ent.Entity{e}
+		all.Destroy(e)
 	}
-	return nil, nil
 }
 
 func (e *Explosion) Position() pixel.Vec {
 	return e.pos
-}
-
-func NewTether() *Tether {
-	return &Tether{
-		sprite: GlobalSpriteManager.FullSprite("tether.png"),
-	}
-}
-
-type Tether struct {
-	start    pixel.Vec
-	end      pixel.Vec
-	sprite   *pixel.Sprite
-	inverted bool
-}
-
-func (e *Tether) Draw(win *pixelgl.Window, worldToScreen pixel.Matrix) {
-	dist := e.start.To(e.end).Len()
-	if dist == 0 {
-		return
-	}
-	yScale := 1.0
-	if e.inverted {
-		yScale = -1.0
-	}
-	e.sprite.Draw(
-		win,
-		pixel.IM.Scaled(pixel.ZV, 1.0/16.0).Moved(pixel.V(0.5, 0)).ScaledXY(pixel.ZV, pixel.V(dist, yScale)).Rotated(pixel.ZV, e.start.To(e.end).Angle()).Moved(e.start).Chained(worldToScreen),
-	)
 }

@@ -1,14 +1,17 @@
 package ent
 
 import (
-	"github.com/google/uuid"
 	"github.com/gopxl/pixel"
 	"github.com/gopxl/pixel/pixelgl"
 )
 
+type EntityUUID string
+
+func (e EntityUUID) UUID() EntityUUID { return e }
+
 // An object that can be drawn to the screen.
 type Drawer interface {
-	UUIDer
+	EntityUUIDer
 	// Called before any Draw method is called on any entity.
 	// Should be used to ready self for drawing.
 	PreDraw(win *pixelgl.Window)
@@ -22,34 +25,22 @@ type Drawer interface {
 
 // An object that can be updated on each update step.
 type Updater interface {
-	UUIDer
+	EntityUUIDer
 	// Called once per frame to update behaviour.
-	Update(win *pixelgl.Window, world *World, dt float64) (toCreate, toDestroy []Entity)
+	Update(win *pixelgl.Window, world *World, dt float64)
 	// Called to get the update layer for this entity.
 	// Higher values will be updated first.
 	// Should NEVER change after entity has been created.
 	UpdateLayer() int
 }
 
-type UUIDer interface {
-	UUID() string
+type EntityUUIDer interface {
+	UUID() EntityUUID
 }
 
 // An object that can be added to a world.
 type Entity interface {
-	UUIDer
-	SetUUID(string)
+	EntityUUIDer
 	AfterAdd(*World)
-}
-
-func SetRandomUUID(e Entity) {
-	e.SetUUID(uuid.NewString())
-}
-
-func ClearUUID(e Entity) {
-	e.SetUUID("")
-}
-
-func HasUUID(e Entity) bool {
-	return e.UUID() != ""
+	HandleMessage(any)
 }

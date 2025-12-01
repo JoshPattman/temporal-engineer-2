@@ -74,7 +74,7 @@ func (a *Asteroid) AfterAdd(w *ent.World) {
 	w.AddTags(a, a.tagName)
 }
 
-func (a *Asteroid) Update(win *pixelgl.Window, entities *ent.World, dt float64) ([]ent.Entity, []ent.Entity) {
+func (a *Asteroid) Update(win *pixelgl.Window, entities *ent.World, dt float64) {
 	// Check if out of range of player, and delete if so
 	player, ok := ent.First(
 		ent.OfType[*Player](
@@ -84,10 +84,10 @@ func (a *Asteroid) Update(win *pixelgl.Window, entities *ent.World, dt float64) 
 	if ok {
 		dist := player.Position().To(a.Position()).Len()
 		if dist > 40 {
-			return nil, []ent.Entity{a}
+			entities.Destroy(a)
+			return
 		}
 	}
-	return nil, nil
 }
 
 func (a *Asteroid) Draw(win *pixelgl.Window, world *ent.World, worldToScreen pixel.Matrix) {

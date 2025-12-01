@@ -29,6 +29,17 @@ func OfType[T any](xs iter.Seq[Entity]) iter.Seq[T] {
 	}
 }
 
+func OneOfType[T any](x Entity, ok bool) (T, bool) {
+	if !ok {
+		return *new(T), false
+	}
+	xT, ok := x.(T)
+	if !ok {
+		return *new(T), false
+	}
+	return xT, true
+}
+
 // Get the first item, or if there are no items return false.
 func First[T any](xs iter.Seq[T]) (T, bool) {
 	for t := range xs {

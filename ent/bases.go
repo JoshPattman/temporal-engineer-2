@@ -1,22 +1,26 @@
 package ent
 
 import (
+	"github.com/google/uuid"
 	"github.com/gopxl/pixel"
 	"github.com/gopxl/pixel/pixelgl"
 )
 
 // Compose to provide basic behaviour to implement Entity.
 type CoreEntity struct {
-	uuid string
+	uuid EntityUUID
 }
 
-func (e *CoreEntity) UUID() string {
+func (e *CoreEntity) UUID() EntityUUID {
+	if e.uuid == "" {
+		e.uuid = EntityUUID(uuid.NewString())
+	}
 	return e.uuid
 }
-func (e *CoreEntity) SetUUID(id string) {
-	e.uuid = id
-}
+
 func (e *CoreEntity) AfterAdd(*World) {}
+
+func (e *CoreEntity) HandleMessage(any) {}
 
 // Compose additionally with MinimalEntity to provide basic behaviour to implement Drawer.
 type WithDraw struct{}
@@ -28,10 +32,8 @@ func (e *WithDraw) DrawLayer() int                                              
 // Compose additionally with MinimalEntity to provide basic behaviour to implement Updater.
 type WithUpdate struct{}
 
-func (e *WithUpdate) Update(win *pixelgl.Window, world *World, dt float64) (toCreate, toDestroy []Entity) {
-	return nil, nil
-}
-func (e *WithUpdate) UpdateLayer() int { return 0 }
+func (e *WithUpdate) Update(win *pixelgl.Window, world *World, dt float64) {}
+func (e *WithUpdate) UpdateLayer() int                                     { return 0 }
 
 // Compose additionally with MinimalEntity to provide basic behaviour to implement transform.
 type WithTransform struct {

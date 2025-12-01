@@ -30,7 +30,7 @@ func (c *Camera) AfterAdd(world *ent.World) {
 }
 
 // Update implements ent.Entity.
-func (c *Camera) Update(win *pixelgl.Window, all *ent.World, dt float64) (toCreate []ent.Entity, toDestroy []ent.Entity) {
+func (c *Camera) Update(win *pixelgl.Window, all *ent.World, dt float64) {
 	target, ok := ent.First(
 		ent.OfType[CameraTarget](
 			all.ForTag("player_camera_target"),
@@ -40,7 +40,6 @@ func (c *Camera) Update(win *pixelgl.Window, all *ent.World, dt float64) (toCrea
 		target = c
 	}
 	c.pos = pixel.Lerp(c.pos, target.Position(), 0.05)
-	return nil, nil
 }
 
 // UpdateLayer implements ent.Entity.

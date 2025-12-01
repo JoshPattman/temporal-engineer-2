@@ -1,0 +1,40 @@
+package ent
+
+import "slices"
+
+func NewBus() *Bus {
+	return &Bus{}
+}
+
+type Bus struct {
+	listeners []EntityUUID
+}
+
+func Emit(w *World, b *Bus, d any) {
+	newListeners := make([]EntityUUID, 0, len(b.listeners))
+	for _, l := range b.listeners {
+		// Only keep if the entity is active in the world or it is queued
+		if !w.HasOrQueued(l) {
+			continue
+		}
+		newListeners = append(newListeners, l)
+		// If the entity is in the world now, send message immediately,
+		// otherwise, queue it to be sent once the entity is added (so we dont drop signals).
+		e, ok := w.WithUUID(l)
+		if ok {
+			e.HandleMessage(d)
+		} else {
+			w.queuedAddWaitingSignals[l] = append(w.queuedAddWaitingSignals[l], d)
+		}
+	}
+	b.listeners = newListeners
+}
+
+func Subscribe(b *Bus, es ...EntityUUIDer) {
+	for _, e := range b.listeners {
+		if slices.Contains(b.listeners, e) {
+			continue
+		}
+		b.listeners = append(b.listeners, e)
+	}
+}

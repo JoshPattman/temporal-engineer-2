@@ -6,15 +6,15 @@ import (
 	"sort"
 )
 
-func NewOrderedIndex[T UUIDer](orderFunc func(T) int) *Index[T] {
+func NewOrderedIndex[T EntityUUIDer](orderFunc func(T) int) *Index[T] {
 	return &Index[T]{
 		orderedItems:  make([]orderedItem[T], 0),
-		containsUUIDs: make(map[string]struct{}),
+		containsUUIDs: make(map[EntityUUID]struct{}),
 		orderOf:       orderFunc,
 	}
 }
 
-func NewUnorderedIndex[T UUIDer]() *Index[T] {
+func NewUnorderedIndex[T EntityUUIDer]() *Index[T] {
 	return NewOrderedIndex(func(t T) int { return 0 })
 }
 
@@ -23,9 +23,9 @@ type orderedItem[T any] struct {
 	order int
 }
 
-type Index[T UUIDer] struct {
+type Index[T EntityUUIDer] struct {
 	orderedItems  []orderedItem[T]
-	containsUUIDs map[string]struct{}
+	containsUUIDs map[EntityUUID]struct{}
 	orderOf       func(T) int
 }
 

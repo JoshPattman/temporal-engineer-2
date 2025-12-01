@@ -41,17 +41,16 @@ func (c *Compass) DrawLayer() int {
 }
 
 // Update implements ent.Entity.
-func (c *Compass) Update(win *pixelgl.Window, all *ent.World, dt float64) (toCreate []ent.Entity, toDestroy []ent.Entity) {
+func (c *Compass) Update(win *pixelgl.Window, all *ent.World, dt float64) {
 	player, ok := ent.First(
 		ent.OfType[*Player](
 			all.ForTag("player"),
 		),
 	)
 	if !ok {
-		return nil, nil
+		return
 	}
 	c.angle = player.Position().Angle()
-	return nil, nil
 }
 
 // UpdateLayer implements ent.Entity.

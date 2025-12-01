@@ -67,9 +67,8 @@ type statsIndicator struct {
 	vPos   float64
 }
 
-func (c *statsIndicator) Update(win *pixelgl.Window, all *ent.World, dt float64) (toCreate []ent.Entity, toDestroy []ent.Entity) {
+func (c *statsIndicator) Update(win *pixelgl.Window, all *ent.World, dt float64) {
 	c.value = c.get(all)
-	return nil, nil
 }
 
 func (c *statsIndicator) Draw(win *pixelgl.Window, _ *ent.World, worldToScreen pixel.Matrix) {
